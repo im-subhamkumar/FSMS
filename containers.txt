@@ -1,0 +1,4 @@
+﻿NAMES           STATUS                     STATE
+fsms_backend    Up 2 minutes (unhealthy)   running
+fsms_frontend   Created                    created
+fsms_db         Up 10 minutes (healthy)    running
