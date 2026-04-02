@@ -61,7 +61,18 @@ We use Docker to make sure everyone is running the exact same environment. You d
    ```
    *Note: The first time you run this, it will take a few minutes to download the node images and build the containers.*
 
-3. **Access the application:**
+3. **Setup Environment Variables:**
+   The project uses environment variables for database connections. Create a `.env` file inside the `backend/` directory using the structure below:
+   
+   ```bash
+   # backend/.env
+   DATABASE_URL="mysql://fsms_user:fsms_password@db:3306/fsms_db"
+   PORT=3000
+   NODE_ENV=development
+   ```
+   *Note: This file is used by Prisma inside the Docker container. Detailed instructions on database passwords can be found in the `docker-compose.yml`.*
+
+4. **Access the application:**
    - **Frontend (Web App):** [http://localhost:5173](http://localhost:5173)
    - **Backend (API):** [http://localhost:5000](http://localhost:5000)
    - **Database (MySQL):** Runs on port `3306`
