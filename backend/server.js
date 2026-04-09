@@ -4,6 +4,7 @@
 // ============================================================
 
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
@@ -27,7 +28,7 @@ app.use(
       'http://frontend:5173',            // docker network alias
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id'],
     credentials: true,
   })
 );
@@ -75,7 +76,17 @@ app.get('/', (req, res) => {
 // TODO: Mount team module routers below
 // ──────────────────────────────────────────
 import studentsRouter from './routes/students.js';
+import instructorsRouter from './routes/instructors.js';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 app.use('/api/students', studentsRouter);
+app.use('/api/instructors', instructorsRouter);
+
+// Serve uploaded files as static assets
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {
