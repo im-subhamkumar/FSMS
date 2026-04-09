@@ -1,6 +1,3 @@
-// This is your Prisma schema file — the single source of truth for the database.
-// Learn more: https://pris.ly/d/prisma-schema
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "windows", "debian-openssl-3.0.x", "linux-musl"]
@@ -11,24 +8,127 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ──────────────────────────────────────────────────────────────
-// Base User model — all team modules should relate to this model
-// ──────────────────────────────────────────────────────────────
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique @db.VarChar(255)
-  password  String   @db.VarChar(255)
-  firstName String   @db.VarChar(100)
-  lastName  String   @db.VarChar(100)
-  role      Role     @default(STUDENT)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         Int         @id @default(autoincrement())
+  email      String      @unique @db.VarChar(255)
+  password   String      @db.VarChar(255)
+  firstName  String      @db.VarChar(100)
+  lastName   String      @db.VarChar(100)
+  role       Role        @default(STUDENT)
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  instructor Instructor?
 
   @@map("users")
 }
 
-// Role enum — extend as needed by individual teams
+model Instructor {
+  id                   Int                   @id @default(autoincrement())
+  userId               Int                   @unique
+  employeeId           String                @unique @db.VarChar(50)
+  designation          InstructorDesignation
+  department           InstructorDepartment
+  dateOfJoining        DateTime              @db.Date
+  employmentType       EmploymentType
+  employmentStatus     EmploymentStatus      @default(ACTIVE)
+  reportingToId        Int?
+  dateOfBirth          DateTime?             @db.Date
+  gender               String?               @db.VarChar(20)
+  nationality          String?               @db.VarChar(100)
+  phone                String?               @db.VarChar(20)
+  emergencyPhone       String?               @db.VarChar(20)
+  address              String?               @db.Text
+  city                 String?               @db.VarChar(100)
+  state                String?               @db.VarChar(100)
+  pinCode              String?               @db.VarChar(20)
+  country              String?               @db.VarChar(100)
+  profilePhotoUrl      String?               @db.VarChar(500)
+  licenseNumber        String?               @db.VarChar(100)
+  licenseTypes         String?               @db.VarChar(255)
+  issuingAuthority     String?               @db.VarChar(50)
+  licenseIssueDate     DateTime?             @db.Date
+  licenseExpiryDate    DateTime?             @db.Date
+  ratings              String?               @db.VarChar(500)
+  typeRatings          String?               @db.VarChar(500)
+  medicalClass         String?               @db.VarChar(20)
+  medicalCertNumber    String?               @db.VarChar(100)
+  medicalIssuingAME    String?               @db.VarChar(200)
+  medicalIssueDate     DateTime?             @db.Date
+  medicalExpiryDate    DateTime?             @db.Date
+  totalHours           Float?                @default(0)
+  picHours             Float?                @default(0)
+  dualHours            Float?                @default(0)
+  simHours             Float?                @default(0)
+  nightHours           Float?                @default(0)
+  instrumentHours      Float?                @default(0)
+  aircraftFlown        String?               @db.VarChar(500)
+  lastFlightDate       DateTime?             @db.Date
+  subjectsCanTeach     String?               @db.VarChar(500)
+  fisDate              DateTime?             @db.Date
+  workDays             String?               @db.VarChar(100)
+  preferredStartTime   String?               @db.VarChar(10)
+  preferredEndTime     String?               @db.VarChar(10)
+  maxFlightHrsDay      Float?                @default(8)
+  maxDualHrsMonth      Float?                @default(100)
+  canDoSim             Boolean               @default(true)
+  canDoGround          Boolean               @default(true)
+  canDoNight           Boolean               @default(false)
+  onLeave              Boolean               @default(false)
+  leaveFrom            DateTime?             @db.Date
+  leaveTo              DateTime?             @db.Date
+  licenseStatus        ExpiryStatus          @default(VALID)
+  medicalStatus        ExpiryStatus          @default(VALID)
+  flightCurrencyStatus CurrencyStatus        @default(CURRENT)
+  totalFlightHrsAccum  Float                 @default(0)
+  monthlyDualHrs       Float                 @default(0)
+  dailyFlightHrs       Float                 @default(0)
+  isDeleted            Boolean               @default(false)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  changeLogs           InstructorChangeLog[]
+  documents            InstructorDocument[]
+  reportingTo          Instructor?           @relation("ReportsTo", fields: [reportingToId], references: [id])
+  reportees            Instructor[]          @relation("ReportsTo")
+  user                 User                  @relation(fields: [userId], references: [id])
+
+  @@index([reportingToId], map: "instructors_reportingToId_fkey")
+  @@map("instructors")
+}
+
+model InstructorDocument {
+  id           Int        @id @default(autoincrement())
+  instructorId Int
+  category     String     @db.VarChar(100)
+  label        String?    @db.VarChar(200)
+  fileName     String     @db.VarChar(255)
+  fileUrl      String     @db.VarChar(500)
+  mimeType     String?    @db.VarChar(100)
+  sizeBytes    Int?
+  uploadedAt   DateTime   @default(now())
+  uploadedBy   Int
+  instructor   Instructor @relation(fields: [instructorId], references: [id])
+
+  @@index([instructorId], map: "instructor_documents_instructorId_fkey")
+  @@map("instructor_documents")
+}
+
+model InstructorChangeLog {
+  id           Int        @id @default(autoincrement())
+  instructorId Int
+  changedBy    Int
+  changedAt    DateTime   @default(now())
+  section      String?    @db.VarChar(50)
+  fieldChanged String     @db.VarChar(100)
+  oldValue     String?    @db.Text
+  newValue     String?    @db.Text
+  note         String?    @db.VarChar(255)
+  instructor   Instructor @relation(fields: [instructorId], references: [id])
+
+  @@index([instructorId], map: "instructor_change_logs_instructorId_fkey")
+  @@map("instructor_change_logs")
+}
+
 enum Role {
   ADMIN
   INSTRUCTOR
@@ -36,6 +136,43 @@ enum Role {
   STAFF
 }
 
+enum InstructorDesignation {
+  CHIEF_FLIGHT_INSTRUCTOR
+  SENIOR_FLIGHT_INSTRUCTOR
+  FLIGHT_INSTRUCTOR
+  GROUND_INSTRUCTOR
+  SIMULATOR_INSTRUCTOR
+}
+
+enum InstructorDepartment {
+  FLYING
+  GROUND
+  SIMULATOR
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+}
+
+enum ExpiryStatus {
+  VALID
+  EXPIRING_SOON
+  EXPIRED
+}
+
+enum CurrencyStatus {
+  CURRENT
+  EXPIRING_SOON
+  NOT_CURRENT
+}
 model Student {
   id          Int      @id @default(autoincrement())
   studentId   String   @unique @db.VarChar(20)
