@@ -1,7 +1,7 @@
 # ============================================================
 # FSMS Backend Dockerfile — Node 18 Slim + Nodemon
 # ============================================================
-FROM node:18-slim
+FROM node:20-slim
 
 # Install OpenSSL and wget (needed by Prisma and compose healthcheck respectively)
 RUN apt-get update && apt-get install -y openssl wget && rm -rf /var/lib/apt/lists/*

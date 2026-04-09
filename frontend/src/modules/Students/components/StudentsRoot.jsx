@@ -14,15 +14,25 @@ export default function StudentsRoot() {
 
   const perPage = 10;
 
+  const fetchStudents = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/students");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setStudents(data);
+      } else {
+        console.error("Failed to fetch students. API returned:", data);
+        setStudents([]); // Fallback to empty array to prevent .filter crash
+      }
+    } catch (err) {
+      console.error("Network error fetching students:", err);
+      setStudents([]); // Fallback to empty array
+    }
+  };
+
   useEffect(() => {
     fetchStudents();
   }, []);
-
-  const fetchStudents = async () => {
-    const res = await fetch("http://localhost:3000/api/students");
-    const data = await res.json();
-    setStudents(data);
-  };
 
   const deleteStudent = async (id) => {
     if (!window.confirm("Delete student?")) return;

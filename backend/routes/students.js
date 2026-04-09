@@ -18,8 +18,10 @@ async function generateStudentId() {
     return "FSMS-STU-0001";
   }
 
-  const lastNumber = parseInt(lastStudent.studentId.split("-")[2]);
-  const newNumber = lastNumber + 1;
+  // Safely parse — guard against unexpected ID formats
+  const parts = lastStudent.studentId?.split("-");
+  const lastNumber = parts?.length === 3 ? parseInt(parts[2]) : 0;
+  const newNumber = isNaN(lastNumber) ? 1 : lastNumber + 1;
 
   return `FSMS-STU-${String(newNumber).padStart(4, "0")}`;
 }
@@ -63,6 +65,9 @@ router.get("/:id", async (req, res) => {
         account: true
       }
     });
+
+    // Return 404 instead of null body if student not found
+    if (!student) return res.status(404).json({ error: 'Student not found' });
 
     res.json(student);
   } catch (error) {

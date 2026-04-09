@@ -60,9 +60,13 @@ function getCurrencyStatus(lastFlightDate) {
 // Auto-generate Employee ID
 // ──────────────────────────────────────────
 async function generateEmployeeId() {
+  // Use last record's ID, not count() — count drops on soft-delete causing collisions
+  const last = await prisma.instructor.findFirst({ orderBy: { id: 'desc' } });
   const year = new Date().getFullYear();
-  const count = await prisma.instructor.count();
-  return `INST-${year}-${String(count + 1).padStart(3, '0')}`;
+  const parts = last?.employeeId?.split('-');
+  const lastNum = parts?.length === 3 ? parseInt(parts[2]) : 0;
+  const num = isNaN(lastNum) ? 1 : lastNum + 1;
+  return `INST-${year}-${String(num).padStart(3, '0')}`;
 }
 
 // ──────────────────────────────────────────
@@ -164,6 +168,9 @@ router.get('/available', async (req, res) => {
 // ──────────────────────────────────────────
 // GET /api/instructors/:id — single instructor
 // ──────────────────────────────────────────
+// ⚠️ IMPORTANT: /available MUST remain registered BEFORE /:id
+// Express matches routes in declaration order. If /:id comes first,
+// the string "available" will be parsed as an :id param and fail.
 router.get('/:id', async (req, res) => {
   try {
     const instructor = await prisma.instructor.findFirst({
