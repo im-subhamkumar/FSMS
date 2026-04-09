@@ -33,3 +33,10 @@
     scrollbar-color: theme('colors.gray.700') transparent;
   }
 }
+.label{
+  @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
+}
+
+.input{
+  @apply w-full border border-gray-300 dark:border-gray-600 px-3 py-2 rounded bg-white dark:bg-gray-700 dark:text-white;
+}

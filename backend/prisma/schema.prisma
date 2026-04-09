@@ -35,3 +35,92 @@ enum Role {
   STUDENT
   STAFF
 }
+
+model Student {
+  id          Int      @id @default(autoincrement())
+  studentId   String   @unique @db.VarChar(20)
+
+  firstName   String   @db.VarChar(100)
+  lastName    String   @db.VarChar(100)
+  email       String   @unique @db.VarChar(255)
+
+  dob         DateTime
+  gender      String   @db.VarChar(20)
+  nationality String   @db.VarChar(100)
+  phone       String?  @db.VarChar(20)
+
+  address     String?  @db.VarChar(255)
+  city        String?  @db.VarChar(100)
+  state       String?  @db.VarChar(100)
+  pincode     String?  @db.VarChar(10)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  licenses    StudentLicense[]
+  medicals    StudentMedical[]
+  documents   StudentDocument[]
+  account     StudentAccount?
+
+  @@map("students")
+}
+
+model StudentLicense {
+  id            Int      @id @default(autoincrement())
+  studentId     Int
+
+  licenseNumber String   @unique @db.VarChar(100)
+  licenseType   String   @db.VarChar(50)
+
+  issueDate     DateTime
+  expiryDate    DateTime
+
+  createdAt     DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_licenses")
+}
+
+model StudentMedical {
+  id                        Int      @id @default(autoincrement())
+  studentId                 Int
+
+  medicalCertificateNumber  String   @unique @db.VarChar(100)
+  issueDate                 DateTime
+  expiryDate                DateTime
+
+  createdAt                 DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_medicals")
+}
+
+model StudentDocument {
+  id           Int      @id @default(autoincrement())
+  studentId    Int
+
+  documentType String   @db.VarChar(100)
+  fileUrl      String   @db.VarChar(255)
+
+  uploadedAt   DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_documents")
+}
+
+model StudentAccount {
+  id           Int      @id @default(autoincrement())
+  studentId    Int      @unique
+
+  schoolEmail  String   @unique @db.VarChar(255)
+  passwordHash String   @db.VarChar(255)
+
+  createdAt    DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_accounts")
+}
