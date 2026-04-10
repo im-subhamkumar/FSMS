@@ -9,21 +9,22 @@ router.get('/aircraft', async (req, res) => {
   try {
     const aircraft = await prisma.aircraft.findMany({
       include: {
+        squawks: {
+          where: { status: 'Open' },
+          take: 1
+        },
         assignedAme: {
-          select: {
-            firstName: true,
-            lastName: true,
-          }
+          select: { firstName: true, lastName: true }
         }
       }
     });
 
-    const formattedAircraft = aircraft.map(ac => ({
+    const formatted = aircraft.map(ac => ({
       ...ac,
       ameAssignedStr: ac.assignedAme ? `${ac.assignedAme.firstName} ${ac.assignedAme.lastName}` : null
     }));
 
-    res.json(formattedAircraft);
+    res.json(formatted);
   } catch (error) {
     console.error('Error fetching aircraft:', error);
     res.status(500).json({ error: 'Failed to fetch aircraft' });
@@ -35,9 +36,7 @@ router.get('/squawks', async (req, res) => {
   try {
     const squawks = await prisma.squawk.findMany({
       where: { status: 'Open' },
-      include: {
-        aircraft: true
-      },
+      include: { aircraft: true },
       orderBy: { createdAt: 'desc' },
     });
     res.json(squawks);
@@ -65,12 +64,8 @@ router.get('/activities', async (req, res) => {
 router.get('/ames', async (req, res) => {
   try {
     const ames = await prisma.user.findMany({
-      where: { role: 'STAFF' }, // Assuming STAFF role is used for AMEs
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-      }
+      where: { role: 'STAFF' },
+      select: { id: true, firstName: true, lastName: true }
     });
     res.json(ames);
   } catch (error) {
@@ -80,21 +75,30 @@ router.get('/ames', async (req, res) => {
 });
 
 // GET /api/maintenance/stats
+// Aircraft team uses status = "Active" / "Inactive" / "Under Maintenance"
 router.get('/stats', async (req, res) => {
   try {
-    const airworthy = await prisma.aircraft.count({ where: { status: 'AIRWORTHY' } });
-    const grounded = await prisma.aircraft.count({ where: { status: 'AOG' } });
-    const openSquawks = await prisma.squawk.count({ where: { status: 'Open' } });
-    const criticalSquawks = await prisma.squawk.count({ where: { status: 'Open', severity: 'Critical' } });
-    
-    // Maintenance due count (example: Next Check <= 10 hours)
-    const maintenanceDueCount = await prisma.aircraft.count({
-      where: { nextCheck: { lte: 10 } }
-    });
+    const [airworthy, grounded, inMaintenance, openSquawks, criticalSquawks, maintenanceDueCount] = await Promise.all([
+      prisma.aircraft.count({ where: { status: 'Active' } }),
+      prisma.aircraft.count({ where: { status: 'Inactive' } }),
+      prisma.aircraft.count({ where: { status: 'Under Maintenance' } }),
+      prisma.squawk.count({ where: { status: 'Open' } }),
+      prisma.squawk.count({ where: { status: 'Open', severity: 'Critical' } }),
+      // Maintenance due = aircraft whose last maintenance was over 90 days ago or never
+      prisma.aircraft.count({
+        where: {
+          OR: [
+            { lastMaintenance: null },
+            { lastMaintenance: { lte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } }
+          ]
+        }
+      })
+    ]);
 
     res.json({
       airworthy,
       grounded,
+      inMaintenance,
       openSquawks,
       criticalSquawks,
       maintenanceDueCount
@@ -112,8 +116,8 @@ router.get('/assigned-repairs', async (req, res) => {
       where: {
         assignedAmeId: { not: null },
         OR: [
-          { status: 'AOG' },
-          { status: 'IN_MAINTENANCE' }
+          { status: 'Inactive' },
+          { status: 'Under Maintenance' }
         ]
       },
       include: {
@@ -127,15 +131,16 @@ router.get('/assigned-repairs', async (req, res) => {
 
     const formatted = aircraftWithIssues.map(ac => {
       const squawk = ac.squawks[0];
+      const isGrounded = ac.status === 'Inactive';
       return {
-        id: ac.tailNumber,
-        issue: squawk ? squawk.issue : 'Maintenance Check',
-        badge: ac.status.replace('_', ' '),
-        badgeColor: ac.status === 'AOG' ? 'red' : 'orange',
-        ame: `Capt. ${ac.assignedAme?.lastName || 'Unknown'}`,
-        due: 'Next Check: ' + ac.nextCheck + 'h',
-        status: ac.status === 'AOG' ? 'Pending' : 'In Progress',
-        statusColor: ac.status === 'AOG' ? 'orange' : 'blue'
+        id: ac.name,
+        issue: squawk ? squawk.issue : 'Scheduled Maintenance',
+        badge: ac.status,
+        badgeColor: isGrounded ? 'red' : 'orange',
+        ame: ac.assignedAme ? `${ac.assignedAme.firstName} ${ac.assignedAme.lastName}` : 'Unassigned',
+        due: ac.lastMaintenance ? `Last: ${new Date(ac.lastMaintenance).toLocaleDateString()}` : 'Never maintained',
+        status: isGrounded ? 'Pending' : 'In Progress',
+        statusColor: isGrounded ? 'orange' : 'blue'
       };
     });
 
@@ -147,6 +152,7 @@ router.get('/assigned-repairs', async (req, res) => {
 });
 
 // POST /api/maintenance/assign-ame
+// Aircraft id is now a String (e.g., "AC-001")
 router.post('/assign-ame', async (req, res) => {
   const { aircraftId, ameId } = req.body;
   if (!aircraftId || !ameId) {
@@ -155,17 +161,17 @@ router.post('/assign-ame', async (req, res) => {
 
   try {
     const updatedAircraft = await prisma.aircraft.update({
-      where: { id: parseInt(aircraftId) },
+      where: { id: String(aircraftId) },   // ID is now a String
       data: {
         assignedAmeId: parseInt(ameId),
-        status: 'IN_MAINTENANCE'
+        status: 'Under Maintenance'
       }
     });
 
     const ame = await prisma.user.findUnique({ where: { id: parseInt(ameId) } });
     await prisma.maintenanceActivity.create({
       data: {
-        description: `AME ${ame?.lastName || ''} assigned to ${updatedAircraft.tailNumber}`,
+        description: `AME ${ame?.firstName || ''} ${ame?.lastName || ''} assigned to ${updatedAircraft.name}`,
         type: 'Info',
         userId: parseInt(ameId)
       }

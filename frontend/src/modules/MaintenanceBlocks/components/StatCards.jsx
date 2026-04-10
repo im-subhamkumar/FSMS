@@ -28,7 +28,7 @@ export default function StatCards() {
 
   const stats = [
     { title: 'Airworthy Aircraft', value: statsData.airworthy, icon: <CheckCircle2 size={24} color="var(--accent-green)" />, badge: { text: 'Fleet Ready', color: 'green' } },
-    { title: 'Grounded (AOG)', value: statsData.grounded, icon: <AlertCircle size={24} color="var(--accent-red)" />, badge: { text: 'Needs Attention', color: 'red' } },
+    { title: 'Grounded (Inactive)', value: statsData.grounded, icon: <AlertCircle size={24} color="var(--accent-red)" />, badge: { text: 'Needs Attention', color: 'red' } },
     { title: 'Open Squawks', value: statsData.openSquawks, icon: <AlertTriangle size={24} color="var(--accent-yellow)" />, badge: { text: `${statsData.criticalSquawks} Critical`, color: 'yellow' } }
   ];
 

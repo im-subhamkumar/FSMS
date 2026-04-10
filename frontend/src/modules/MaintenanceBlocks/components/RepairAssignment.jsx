@@ -122,8 +122,8 @@ export default function RepairAssignment() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                        <span style={{ color: isSelected ? 'var(--accent-red)' : 'var(--text-muted)' }}>⤓</span>
-                       <span style={{ fontWeight: 600 }}>{squawk.aircraft?.tailNumber || 'Unknown'}</span>
-                       <span className="text-muted" style={{ fontSize: '0.85rem' }}>{squawk.aircraft?.type || 'Unknown'}</span>
+                     <span style={{ fontWeight: 600 }}>{squawk.aircraft?.name || 'Unknown'}</span>
+                       <span className="text-muted" style={{ fontSize: '0.85rem' }}>{squawk.aircraft?.model || 'Unknown'}</span>
                        <span className={`badge badge-${squawk.severity.toLowerCase() === 'critical' ? 'red' : 'orange'}`}>{squawk.severity}</span>
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Issue: {squawk.issue}</div>

@@ -27,9 +27,9 @@ export default function FleetStatus() {
 
   const getBadgeColor = (status) => {
     switch (status) {
-      case 'AIRWORTHY': return 'green';
-      case 'AOG': return 'red';
-      case 'IN_MAINTENANCE': return 'orange';
+      case 'Active': return 'green';
+      case 'Inactive': return 'red';
+      case 'Under Maintenance': return 'orange';
       default: return 'muted';
     }
   };
@@ -47,10 +47,10 @@ export default function FleetStatus() {
         <table className="dashboard-table">
           <thead>
             <tr>
-              <th>Tail No.</th>
+              <th>Name</th>
+              <th>Model</th>
               <th>Type</th>
-              <th>Hours</th>
-              <th>Next Check</th>
+              <th>Last Maintenance</th>
               <th>Status</th>
               <th>AME Assigned</th>
             </tr>
@@ -58,13 +58,13 @@ export default function FleetStatus() {
           <tbody>
             {fleetData.map((row, i) => (
               <tr key={i}>
-                <td style={{ fontWeight: 600 }}>{row.tailNumber}</td>
+                <td style={{ fontWeight: 600 }}>{row.name}</td>
+                <td className="text-muted">{row.model}</td>
                 <td className="text-muted">{row.type}</td>
-                <td>{row.hours}</td>
-                <td style={{ color: `var(--${row.nextCheck <= 10 ? 'accent-red' : row.nextCheck <= 20 ? 'accent-orange' : 'text-muted'})` }}>
-                  {row.nextCheck} hrs
+                <td style={{ color: !row.lastMaintenance ? 'var(--accent-red)' : 'var(--text-muted)' }}>
+                  {row.lastMaintenance ? new Date(row.lastMaintenance).toLocaleDateString() : 'Never'}
                 </td>
-                <td><span className={`badge badge-${getBadgeColor(row.status)}`}>{row.status.replace('_', ' ')}</span></td>
+                <td><span className={`badge badge-${getBadgeColor(row.status)}`}>{row.status}</span></td>
                 <td className="text-muted">{row.ameAssignedStr || '—'}</td>
               </tr>
             ))}
