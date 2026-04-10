@@ -1,14 +1,15 @@
-import React from 'react';
+import { Routes, Route } from "react-router-dom";
+import StudentsRoot from "../components/StudentsRoot";
+import StudentForm from "../components/StudentForm";
+import StudentProfile from "../components/StudentProfile";
 
-export default function StudentsRoot() {
-    return (
-        <div className="flex flex-col h-full">
-            <h1 className="text-2xl font-bold mb-4">S tu de nt s</h1>
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 flex items-center justify-center">
-                <p className="text-gray-500 dark:text-gray-400 text-lg">
-                    This is the S tu de nt s module placeholder.
-                </p>
-            </div>
-        </div>
-    );
+export default function StudentsPages() {
+  return (
+    <Routes>
+      <Route index element={<StudentsRoot />} />
+      <Route path=":id" element={<StudentProfile />} />
+      <Route path="new" element={<StudentForm />} />
+      <Route path="edit/:id" element={<StudentForm />} />
+    </Routes>
+  );
 }

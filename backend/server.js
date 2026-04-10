@@ -4,12 +4,18 @@
 // ============================================================
 
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 // Load environment variables from .env file
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const prisma = new PrismaClient();
@@ -27,7 +33,7 @@ app.use(
       'http://frontend:5173',            // docker network alias
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id'],
     credentials: true,
   })
 );
@@ -37,6 +43,9 @@ app.use(express.json());
 
 // Parse URL-encoded bodies (form submissions)
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files as static assets
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ──────────────────────────────────────────
 // Routes
@@ -72,13 +81,19 @@ app.get('/', (req, res) => {
 });
 
 // ──────────────────────────────────────────
-// TODO: Mount team module routers below
+// Team Module Routers
 // ──────────────────────────────────────────
 import studentsRouter from './routes/students.js';
 import maintenanceRouter from './routes/maintenance.js';
+import instructorsRouter from './routes/instructors.js';
+import weatherRouter from './routes/weather.js';
+import aircraftRouter from './routes/aircraft.js';
 
 app.use('/api/students', studentsRouter);
 app.use('/api/maintenance', maintenanceRouter);
+app.use('/api/instructors', instructorsRouter);
+app.use('/api/weather', weatherRouter);
+app.use('/api/aircraft', aircraftRouter);
 
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {
@@ -86,7 +101,7 @@ app.use((req, res) => {
 });
 
 // Global error handler
-app.use((err, req, res, _next) => {
+app.use((err, res, _next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error', details: err.message });
 });
