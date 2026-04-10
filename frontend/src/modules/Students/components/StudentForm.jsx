@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
   User, ShieldCheck, HeartPulse, FileText, Lock, 
-  ChevronRight, ChevronLeft, Save, Plus, Trash2, CheckCircle2 
+  ChevronRight, ChevronLeft, Save, Plus, Trash2, CheckCircle2,
+  Upload, X
 } from "lucide-react";
+import { useRef } from "react";
 
 
 const InputField = ({ label, name, type = "text", required, fullWidth, value, onChange, options }) => (
@@ -53,13 +55,16 @@ export default function StudentForm() {
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const fileRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
 
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", dob: "", gender: "", 
     nationality: "", phone: "", address: "", city: "", state: "", pincode: "",
     licenseNumber: "", licenseType: "", licenseIssueDate: "", licenseExpiryDate: "",
     medicalCertificateNumber: "", medicalIssueDate: "", medicalExpiryDate: "",
-    schoolEmail: "", passwordHash: "", documents: []
+    schoolEmail: "", passwordHash: "", batch: "", documents: []
   });
 
   const steps = [
@@ -91,6 +96,7 @@ export default function StudentForm() {
         medicalCertificateNumber: data.medicals?.[0]?.medicalCertificateNumber || "",
         medicalIssueDate: data.medicals?.[0]?.issueDate?.slice(0, 10) || "",
         medicalExpiryDate: data.medicals?.[0]?.expiryDate?.slice(0, 10) || "",
+        batch: data.batch || "",
         documents: data.documents || []
       }));
     } catch (error) {
@@ -107,6 +113,15 @@ export default function StudentForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const validPendingFiles = pendingFiles.filter(pf => pf.file);
+    const totalDocs = form.documents.length + validPendingFiles.length;
+    
+    if (totalDocs < 3) {
+      alert("Please ensure at least 3 supporting documents have files actively attached to them before saving.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const url = isEdit
@@ -116,11 +131,45 @@ export default function StudentForm() {
     const method = isEdit ? "PUT" : "POST";
 
     try {
-      await fetch(url, {
+      const formPayload = { ...form };
+      delete formPayload.documents; // We handle documents via separate endpoints now
+
+      const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify(formPayload)
       });
+      const data = await res.json();
+
+      const newStudentId = isEdit ? id : data.id;
+
+      // Upload newly added files seamlessly
+      if (validPendingFiles.length > 0) {
+        let uploadErrors = 0;
+        await Promise.all(validPendingFiles.map(async (pf) => {
+          const fd = new FormData();
+          fd.append('file', pf.file);
+          fd.append('documentType', pf.type || 'General');
+          try {
+            const upRes = await fetch(`http://localhost:3000/api/students/${newStudentId}/documents`, {
+              method: 'POST',
+              body: fd
+            });
+            if (!upRes.ok) {
+              uploadErrors++;
+              console.error("Failed to upload document", pf.file.name, await upRes.text());
+            }
+          } catch (err) {
+            uploadErrors++;
+            console.error("Network error during document upload", err);
+          }
+        }));
+
+        if (uploadErrors > 0) {
+          alert(`Student profile saved, but ${uploadErrors} document(s) failed to upload. Please edit the student to re-upload them.`);
+        }
+      }
+
       navigate("/students");
     } catch (error) {
       console.error("Submission failed", error);
@@ -204,10 +253,10 @@ export default function StudentForm() {
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 border-b border-slate-100 dark:border-slate-700 pb-4">Aviation License Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InputField value={form.licenseNumber} onChange={handleChange} label="License Number" name="licenseNumber" fullWidth />
-                <InputField value={form.licenseType} onChange={handleChange} label="License Type (e.g. PPL, CPL)" name="licenseType" fullWidth />
-                <InputField value={form.licenseIssueDate} onChange={handleChange} label="Date of Issue" name="licenseIssueDate" type="date" />
-                <InputField value={form.licenseExpiryDate} onChange={handleChange} label="Expiry Date" name="licenseExpiryDate" type="date" />
+                <InputField value={form.licenseNumber} onChange={handleChange} label="License Number" name="licenseNumber" required fullWidth />
+                <InputField value={form.licenseType} onChange={handleChange} label="License Type (e.g. PPL, CPL)" name="licenseType" required fullWidth />
+                <InputField value={form.licenseIssueDate} onChange={handleChange} label="Date of Issue" name="licenseIssueDate" type="date" required />
+                <InputField value={form.licenseExpiryDate} onChange={handleChange} label="Expiry Date" name="licenseExpiryDate" type="date" required />
               </div>
             </div>
           )}
@@ -216,9 +265,9 @@ export default function StudentForm() {
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 border-b border-slate-100 dark:border-slate-700 pb-4">Medical Certificate</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InputField value={form.medicalCertificateNumber} onChange={handleChange} label="Certificate Number" name="medicalCertificateNumber" fullWidth />
-                <InputField value={form.medicalIssueDate} onChange={handleChange} label="Date of Medical Exam" name="medicalIssueDate" type="date" />
-                <InputField value={form.medicalExpiryDate} onChange={handleChange} label="Valid Until" name="medicalExpiryDate" type="date" />
+                <InputField value={form.medicalCertificateNumber} onChange={handleChange} label="Certificate Number" name="medicalCertificateNumber" required fullWidth />
+                <InputField value={form.medicalIssueDate} onChange={handleChange} label="Date of Medical Exam" name="medicalIssueDate" type="date" required />
+                <InputField value={form.medicalExpiryDate} onChange={handleChange} label="Valid Until" name="medicalExpiryDate" type="date" required />
               </div>
             </div>
           )}
@@ -227,8 +276,22 @@ export default function StudentForm() {
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 border-b border-slate-100 dark:border-slate-700 pb-4">School Account Access</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InputField value={form.schoolEmail} onChange={handleChange} label="School Email Address" name="schoolEmail" type="email" fullWidth />
-                <InputField value={form.passwordHash} onChange={handleChange} label="Temporary Password" name="passwordHash" type="password" fullWidth />
+                <InputField value={form.schoolEmail} onChange={handleChange} label="School Email Address" name="schoolEmail" type="email" required fullWidth />
+                <InputField value={form.passwordHash} onChange={handleChange} label="Temporary Password" name="passwordHash" type="password" required={!isEdit} />
+                <InputField 
+                  value={form.batch} 
+                  onChange={handleChange} 
+                  label="Training Batch" 
+                  name="batch" 
+                  type="select" 
+                  required
+                  options={[
+                    {value: "Ground School", label: "Ground School"},
+                    {value: "Simulator", label: "Simulator"},
+                    {value: "Dual Flights", label: "Dual Flights"},
+                    {value: "Solo Flights", label: "Solo Flights"}
+                  ]} 
+                />
               </div>
             </div>
           )}
@@ -239,68 +302,131 @@ export default function StudentForm() {
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white">Supporting Documents</h2>
                   <button 
                     type="button" 
-                    onClick={() => setForm(prev => ({ ...prev, documents: [...prev.documents, { documentType: "", fileUrl: "" }] }))}
+                    onClick={() => setPendingFiles(prev => [...prev, { file: null, type: "" }])}
                     className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-sm font-semibold rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
                   >
                     <Plus size={16} /> Add Document
                   </button>
                </div>
               
-              <div className="space-y-4">
-                {form.documents.map((doc, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 relative group">
-                    <div className="md:col-span-5">
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Document Type</label>
-                      <input 
-                        value={doc.documentType} 
-                        onChange={(e) => {
-                          const newDocs = [...form.documents];
-                          newDocs[index].documentType = e.target.value;
-                          setForm({ ...form, documents: newDocs });
-                        }} 
-                        className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50" 
-                        placeholder="e.g. Scan of Passport"
-                      />
+              {/* Existing Documents */}
+              {form.documents.length > 0 && (
+                <div className="mb-6 space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Already Uploaded</h3>
+                  {form.documents.map((doc, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-700 rounded-xl hover:shadow-sm transition-all duration-200 group">
+                      <div className="flex items-center gap-3">
+                        <FileText className="text-indigo-500" size={24} />
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{doc.documentType || 'Document'} <span className="text-xs font-normal text-slate-500 ml-2">Stored File</span></p>
+                          <a href={doc.fileUrl.startsWith('http') ? doc.fileUrl : `http://localhost:3000${doc.fileUrl}`} target="_blank" rel="noreferrer" className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 group-hover:underline">View Original File</a>
+                        </div>
+                      </div>
+                      {isEdit && (
+                        <button 
+                          type="button" 
+                          onClick={async () => {
+                            if (!window.confirm("Permanently delete this document?")) return;
+                            try {
+                              await fetch(`http://localhost:3000/api/students/${id}/documents/${doc.id}`, { method: 'DELETE' });
+                              setForm(prev => ({ ...prev, documents: prev.documents.filter(d => d.id !== doc.id) }));
+                            } catch (e) {
+                              console.error(e);
+                            }
+                          }}
+                          className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg opacity-60 group-hover:opacity-100 transition-all"
+                          title="Delete Stored Document"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                     </div>
-                    <div className="md:col-span-6">
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Secure Link (URL)</label>
-                      <input 
-                        value={doc.fileUrl} 
-                        onChange={(e) => {
-                          const newDocs = [...form.documents];
-                          newDocs[index].fileUrl = e.target.value;
-                          setForm({ ...form, documents: newDocs });
-                        }} 
-                        className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-indigo-600 dark:text-indigo-400" 
-                        placeholder="https://storage.provider.com/file..."
-                      />
-                    </div>
-                    <div className="md:col-span-1 flex justify-end">
+                  ))}
+                </div>
+              )}
+
+              {/* Pending Files List (Slots) */}
+              {pendingFiles.length > 0 && (
+                <div className="mt-6 space-y-4">
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">New Documents</h3>
+                  {pendingFiles.map((pf, idx) => (
+                    <div key={idx} className="p-4 bg-indigo-50/30 border border-indigo-100 dark:bg-indigo-900/10 dark:border-indigo-800/50 rounded-xl space-y-4 relative">
+                      
                       <button 
                         type="button" 
-                        onClick={() => {
-                          const newDocs = form.documents.filter((_, i) => i !== index);
-                          setForm({ ...form, documents: newDocs });
-                        }}
-                        className="p-2.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
-                        title="Remove Document"
+                        onClick={() => setPendingFiles(prev => prev.filter((_, i) => i !== idx))}
+                        className="absolute top-4 right-4 p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={18} />
                       </button>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Document Type / Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. ID Proof, Passport"
+                          value={pf.type}
+                          onChange={(e) => {
+                            const updated = [...pendingFiles];
+                            updated[idx].type = e.target.value;
+                            setPendingFiles(updated);
+                          }}
+                          className="w-full pr-12 px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Attach File</label>
+                        {pf.file ? (
+                          <div className="flex items-center justify-between p-3 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-700 rounded-lg">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                              <FileText className="text-indigo-500 shrink-0" size={20} />
+                              <div className="truncate">
+                                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{pf.file.name}</p>
+                                <p className="text-xs text-slate-500">{(pf.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                              </div>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                const updated = [...pendingFiles];
+                                updated[idx].file = null;
+                                setPendingFiles(updated);
+                              }}
+                              className="text-xs font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 py-1.5 px-3 rounded-md transition-colors"
+                            >
+                              Change
+                            </button>
+                          </div>
+                        ) : (
+                          <div 
+                            className="relative flex items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-400 transition-colors cursor-pointer group"
+                          >
+                            <input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  const updated = [...pendingFiles];
+                                  updated[idx].file = file;
+                                  setPendingFiles(updated);
+                                }
+                              }}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            <div className="flex flex-col items-center pointer-events-none">
+                              <Upload className="text-slate-400 group-hover:text-indigo-500 mb-2 transition-colors" size={24} />
+                              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">Click to browse or drag & drop</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                     </div>
-                  </div>
-                ))}
-                
-                {form.documents.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-10 px-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                    <FileText size={32} className="text-slate-300 dark:text-slate-600 mb-3" />
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-1 font-medium">No documents attached</p>
-                    <p className="text-slate-400 dark:text-slate-500 text-xs text-center max-w-sm">
-                      Attach government IDs, signed waivers, prior transcripts, or any other relevant files.
-                    </p>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -331,7 +457,12 @@ export default function StudentForm() {
             {step < 5 ? (
               <button
                 type="button"
-                onClick={(e) => { e.preventDefault(); setStep(s => s + 1); }}
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  const formElement = e.target.closest('form');
+                  if (formElement && !formElement.reportValidity()) return;
+                  setStep(s => s + 1); 
+                }}
                 className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/20"
               >
                 Next Step <ChevronRight size={18} />

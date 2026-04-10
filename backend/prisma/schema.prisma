@@ -191,6 +191,8 @@ model Student {
   state       String?  @db.VarChar(100)
   pincode     String?  @db.VarChar(10)
 
+  batch       String?  @db.VarChar(50)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
