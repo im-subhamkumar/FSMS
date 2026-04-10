@@ -261,3 +261,27 @@ model StudentAccount {
 
   @@map("student_accounts")
 }
+
+model WeatherCheck {
+  id             Int      @id @default(autoincrement())
+  timestamp      DateTime @default(now())
+  icao           String   @db.VarChar(10)
+  stationName    String?  @db.VarChar(200)
+  studentType    String?  @db.VarChar(50)
+  verdict        String   @db.VarChar(20)
+  flightCategory String?  @db.VarChar(20)
+  windSpeed      Int?
+  windGust       Int?
+  visibilitySm   Float?
+  ceilingFt      Int?
+  temperatureC   Float?
+  metarRaw       String?  @db.Text
+  reasons        String?  @db.Text
+  warnings       String?  @db.Text
+  checkedBy      String   @default("system") @db.VarChar(100)
+  requestSource  String   @default("dashboard") @db.VarChar(100)
+
+  @@index([icao])
+  @@index([timestamp])
+  @@map("weather_checks")
+}

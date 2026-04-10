@@ -59,11 +59,11 @@ services:
     networks:
       - fsms_network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 15s
-      timeout: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 20s
+      timeout: 10s
       retries: 5
-      start_period: 20s
+      start_period: 40s
 
   # ──────────────────────────────────────────
   # 3. React / Vite Frontend
