@@ -143,26 +143,26 @@ export default function WeatherHoldsPage() {
   };
 
   return (
-    <div className="font-[Inter,system-ui,sans-serif] text-slate-900 min-h-screen bg-gradient-to-br from-slate-50 to-white pb-10">
+    <div className="font-[Inter,system-ui,sans-serif] text-slate-900 dark:text-slate-100 min-h-screen bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 pb-10">
       <Header onSearch={handleSearch} stationId={metarData?.station_id} />
 
-      <div className="flex justify-between items-center bg-white/70 backdrop-blur-lg border border-blue-500/20 px-4 py-3 mx-4 lg:mx-5 mb-4 rounded-xl shadow-sm text-sm text-slate-700">
+      <div className="flex justify-between items-center bg-white/70 dark:bg-slate-800/60 backdrop-blur-lg border border-blue-500/20 dark:border-slate-700/50 px-4 py-3 mx-4 lg:mx-5 mb-4 rounded-xl shadow-sm text-sm text-slate-700 dark:text-slate-300">
         <div className="flex gap-3 items-center">
           <button
-            className={`p-1.5 rounded-lg transition-colors ${autoRefresh ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 hover:bg-slate-200'}`}
+            className={`p-1.5 rounded-lg transition-colors ${autoRefresh ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
             onClick={() => setAutoRefresh(!autoRefresh)}
           >
             {autoRefresh ? '🔄' : '⏸️'}
           </button>
-          <span className="font-medium text-slate-600">
+          <span className="font-medium text-slate-600 dark:text-slate-400">
             {autoRefresh ? `Auto-refresh in ${formatCountdown(countdown)}` : 'Auto-refresh paused'}
           </span>
         </div>
         <div className="flex gap-3 items-center">
-          <button className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors shadow-sm" onClick={() => setShowHistory(!showHistory)}>
+          <button className="px-3 py-1.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shadow-sm" onClick={() => setShowHistory(!showHistory)}>
             📋 {showHistory ? 'Hide History' : 'History'}
           </button>
-          <button className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors shadow-sm" onClick={() => handleSearch(icao)}>
+          <button className="px-3 py-1.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shadow-sm" onClick={() => handleSearch(icao)}>
             ↻ Refresh Now
           </button>
         </div>
@@ -170,10 +170,10 @@ export default function WeatherHoldsPage() {
 
       {toast.visible && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
-          <div className="flex items-center gap-3 bg-white border border-slate-200 shadow-xl rounded-xl p-4 min-w-[300px]">
+          <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl p-4 min-w-[300px]">
             <span className="text-xl">{toast.type === 'error' ? '🚫' : 'ℹ️'}</span>
-            <div className="flex-1 text-sm font-medium text-slate-700">{toast.msg}</div>
-            <button className="text-slate-400 hover:text-slate-600" onClick={() => setToast({ visible: false })}>✕</button>
+            <div className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300">{toast.msg}</div>
+            <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" onClick={() => setToast({ visible: false })}>✕</button>
           </div>
         </div>
       )}
