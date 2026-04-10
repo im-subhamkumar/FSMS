@@ -77,6 +77,7 @@ app.get('/', (req, res) => {
 // ──────────────────────────────────────────
 import studentsRouter from './routes/students.js';
 import instructorsRouter from './routes/instructors.js';
+import weatherRouter from './routes/weather.js';
 import aircraftRouter from './routes/aircraft.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -85,6 +86,7 @@ const __dirname = dirname(__filename);
 
 app.use('/api/students', studentsRouter);
 app.use('/api/instructors', instructorsRouter);
+app.use('/api/weather', weatherRouter);
 app.use('/api/aircraft', aircraftRouter);
 
 // Serve uploaded files as static assets
