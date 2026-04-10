@@ -8,7 +8,6 @@ import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-import path from 'path';
 
 // Load environment variables from .env file
 dotenv.config();

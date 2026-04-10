@@ -21,12 +21,12 @@ export const DocumentDetailsModal = ({ isOpen, onClose, document, onUploadNewVer
     if (!isOpen || !mounted || !document) return null;
 
     const getStatusStyle = (doc) => {
-        if (doc.status === 'EXPIRED') return 'bg-red-100 text-red-700 border-red-200';
+        if (doc.status === 'EXPIRED') return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800/50';
         const warningDays = doc.category?.warningThresholdDays || 30;
         if (doc.expiryDate && new Date(doc.expiryDate) < new Date(Date.now() + warningDays * 24 * 60 * 60 * 1000)) {
-            return 'bg-amber-100 text-amber-700 border-amber-200';
+            return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50';
         }
-        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+        return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50';
     };
 
     const getStatusText = (doc) => {
@@ -48,18 +48,18 @@ export const DocumentDetailsModal = ({ isOpen, onClose, document, onUploadNewVer
     };
 
     const modalContent = (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col scale-100 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 dark:bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col scale-100 animate-in zoom-in-95 duration-200 border border-transparent dark:border-slate-800 transition-colors">
                 {/* Header */}
-                <div className="flex justify-between items-start p-6 border-b border-slate-100 bg-slate-50/50">
+                <div className="flex justify-between items-start p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 transition-colors">
                     <div className="flex gap-4 items-start">
-                        <div className="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
+                        <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-inner">
                             <FileText className="w-7 h-7" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{document.title}</h2>
+                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{document.title}</h2>
                             <div className="flex items-center gap-3 mt-2 flex-wrap">
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-200 text-slate-700">
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                                     {document.category?.name || 'Uncategorized'}
                                 </span>
                                 <div className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${getStatusStyle(document)}`}>
@@ -67,7 +67,7 @@ export const DocumentDetailsModal = ({ isOpen, onClose, document, onUploadNewVer
                                     {getStatusText(document)}
                                 </div>
                                 {document.expiryDate && (
-                                    <span className="flex items-center text-xs text-slate-500 gap-1 font-medium bg-slate-100 px-2 py-1 rounded-md">
+                                    <span className="flex items-center text-xs text-slate-500 dark:text-slate-400 gap-1 font-medium bg-slate-100 dark:bg-slate-800/80 px-2 py-1 rounded-md">
                                         <Calendar className="w-3.5 h-3.5" />
                                         Expires: {new Date(document.expiryDate).toLocaleDateString()}
                                     </span>
@@ -75,28 +75,28 @@ export const DocumentDetailsModal = ({ isOpen, onClose, document, onUploadNewVer
                             </div>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-full transition-colors">
+                    <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 rounded-full transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 {/* Body - Version History */}
-                <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
+                <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30 dark:bg-slate-900/50 transition-colors">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                            <History className="w-5 h-5 text-blue-600" />
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                            <History className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                             Version History
                         </h3>
                     </div>
 
                     {isLoading ? (
                         <div className="flex justify-center p-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
                         </div>
                     ) : (
                         <div className="space-y-4">
                             {documentVersions.length === 0 ? (
-                                <p className="text-slate-500 text-center py-4">No version history available.</p>
+                                <p className="text-slate-500 dark:text-slate-400 text-center py-4">No version history available.</p>
                             ) : (
                                 documentVersions.map((version, index) => {
                                     const isLatest = index === 0;
@@ -107,28 +107,28 @@ export const DocumentDetailsModal = ({ isOpen, onClose, document, onUploadNewVer
                                             key={version.id} 
                                             className={`p-4 rounded-xl border transition-all ${
                                                 isLatest 
-                                                ? 'bg-blue-50/50 border-blue-200 shadow-sm' 
-                                                : 'bg-white border-slate-200 hover:border-slate-300'
+                                                ? 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 shadow-sm' 
+                                                : 'bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                                             }`}
                                         >
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4">
                                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                                                        isLatest ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'
+                                                        isLatest ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                                                     }`}>
                                                         V{version.version}
                                                     </div>
                                                     <div>
-                                                        <p className={`font-semibold text-sm ${isLatest ? 'text-blue-900' : 'text-slate-700'}`}>
+                                                        <p className={`font-semibold text-sm ${isLatest ? 'text-blue-900 dark:text-blue-300' : 'text-slate-700 dark:text-slate-200'}`}>
                                                             {version.originalName}
                                                         </p>
-                                                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 mb-1">
+                                                        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-1 mb-1">
                                                             <span>Uploaded on {new Date(version.uploadedAt).toLocaleString()}</span>
-                                                            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                                                            <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
                                                             <span>{(version.size / 1024 / 1024).toFixed(2)} MB</span>
                                                         </div>
                                                         {version.description && (
-                                                            <p className="mt-2 text-sm text-slate-600 bg-slate-100/50 p-2.5 rounded-lg border border-slate-100 italic">
+                                                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 bg-slate-100/50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 italic">
                                                                 "{version.description}"
                                                             </p>
                                                         )}
@@ -141,8 +141,8 @@ export const DocumentDetailsModal = ({ isOpen, onClose, document, onUploadNewVer
                                                         rel="noopener noreferrer"
                                                         className={`p-2 rounded-lg transition-colors flex flex-col items-center gap-1 ${
                                                             isLatest 
-                                                            ? 'text-blue-600 hover:bg-blue-100' 
-                                                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                                                            ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30' 
+                                                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200'
                                                         }`}
                                                         title="View this version"
                                                     >
@@ -155,8 +155,8 @@ export const DocumentDetailsModal = ({ isOpen, onClose, document, onUploadNewVer
                                                         rel="noopener noreferrer"
                                                         className={`p-2 rounded-lg transition-colors flex flex-col items-center gap-1 ${
                                                             isLatest 
-                                                            ? 'text-blue-600 hover:bg-blue-100' 
-                                                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                                                            ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30' 
+                                                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200'
                                                         }`}
                                                         title="Download this version"
                                                     >
@@ -173,10 +173,10 @@ export const DocumentDetailsModal = ({ isOpen, onClose, document, onUploadNewVer
                 </div>
 
                 {/* Footer Actions */}
-                <div className="p-6 border-t border-slate-100 bg-white flex justify-end gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
+                <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 flex justify-end gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)] transition-colors">
                     <button 
                         onClick={onClose}
-                        className="px-5 py-2.5 font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                        className="px-5 py-2.5 font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
                     >
                         Close
                     </button>
