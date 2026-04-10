@@ -25,6 +25,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  assignedAircraft Aircraft[] @relation("AssignedAme")
+  createdAircraft  Aircraft[] @relation("AircraftCreator")
+  reportedSquawks  Squawk[]   @relation("SquawkReporter")
+  activities       MaintenanceActivity[] @relation("ActivityUser")
+
   @@map("users")
 }
 
@@ -34,4 +39,62 @@ enum Role {
   INSTRUCTOR
   STUDENT
   STAFF
+}
+
+enum AircraftStatus {
+  AIRWORTHY
+  AOG // Aircraft on Ground
+  IN_MAINTENANCE
+}
+
+model Aircraft {
+  id          Int      @id @default(autoincrement())
+  tailNumber  String   @unique @db.VarChar(50)
+  type        String   @db.VarChar(100)
+  hours       Int      @default(0)
+  nextCheck   Int      // Maintenance due at X hours
+  status      AircraftStatus @default(AIRWORTHY)
+  
+  assignedAmeId Int?
+  assignedAme   User?    @relation("AssignedAme", fields: [assignedAmeId], references: [id])
+  
+  squawks     Squawk[]
+
+  // Auditing
+  createdBy   Int?
+  creator     User?    @relation("AircraftCreator", fields: [createdBy], references: [id])
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@map("aircraft")
+}
+
+model Squawk {
+  id          Int      @id @default(autoincrement())
+  aircraftId  Int
+  aircraft    Aircraft @relation(fields: [aircraftId], references: [id])
+  issue       String   @db.VarChar(255)
+  severity    String   @default("Normal") @db.VarChar(50) // e.g., Critical, Major, Normal
+  status      String   @default("Open") @db.VarChar(50)   // Open, Closed
+  
+  reportedById Int?
+  reporter    User?    @relation("SquawkReporter", fields: [reportedById], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("squawks")
+}
+
+model MaintenanceActivity {
+  id          Int      @id @default(autoincrement())
+  description String   @db.Text
+  type        String   @db.VarChar(50) // e.g. Alert, Complete, Info
+  
+  userId      Int?
+  user        User?    @relation("ActivityUser", fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@map("maintenance_activities")
 }

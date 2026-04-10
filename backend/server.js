@@ -75,7 +75,10 @@ app.get('/', (req, res) => {
 // TODO: Mount team module routers below
 // ──────────────────────────────────────────
 import studentsRouter from './routes/students.js';
+import maintenanceRouter from './routes/maintenance.js';
+
 app.use('/api/students', studentsRouter);
+app.use('/api/maintenance', maintenanceRouter);
 
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {
