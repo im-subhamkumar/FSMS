@@ -68,13 +68,13 @@ export default function AlertsList() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '50%' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: 'var(--text-main)', fontSize: '0.85rem' }}>
                     <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: `var(--accent-${color})` }}></span>
-                    {alert.aircraft?.tailNumber || 'Unknown'}
+                    {alert.aircraft?.name || 'Unknown'}
                   </span>
                   <span className="text-muted" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{alert.issue}</span>
                 </div>
                 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                  <span className="text-muted" style={{ fontSize: '0.8rem' }}>Reported: {timeAgo(alert.reportedAt)}</span>
+                  <span className="text-muted" style={{ fontSize: '0.8rem' }}>Reported: {timeAgo(alert.createdAt)}</span>
                   <span style={{ color: `var(--accent-${color})`, fontSize: '0.8rem', fontWeight: 500, width: '60px', textAlign: 'right' }}>{alert.severity}</span>
                   <BellRing size={16} color={`var(--accent-${color})`} />
                 </div>

@@ -50,6 +50,9 @@ router.get('/squawks', async (req, res) => {
 router.get('/activities', async (req, res) => {
   try {
     const activities = await prisma.maintenanceActivity.findMany({
+      include: {
+        user: { select: { firstName: true, lastName: true } }
+      },
       orderBy: { createdAt: 'desc' },
       take: 20
     });

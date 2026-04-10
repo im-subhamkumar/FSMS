@@ -32,11 +32,11 @@ export default function ExpandedTableView({ type }) {
           <tr>
             {type === 'fleet' ? (
               <>
-                <th>Tail No.</th>
-                <th>Type</th>
+                <th>Name</th>
+                <th>Model</th>
                 <th>Status</th>
-                <th>Base</th>
-                <th>Total Hours</th>
+                <th>Type</th>
+                <th>Last Maintenance</th>
               </>
             ) : (
               <>
@@ -56,11 +56,11 @@ export default function ExpandedTableView({ type }) {
             <tr key={i}>
               {type === 'fleet' ? (
                 <>
-                  <td style={{ fontWeight: 600 }}>{row.tailNumber}</td>
+                   <td style={{ fontWeight: 600 }}>{row.name}</td>
+                  <td>{row.model}</td>
+                  <td><span className={`badge badge-${row.status === 'Active' ? 'green' : row.status === 'Under Maintenance' ? 'blue' : 'red'}`}>{row.status}</span></td>
                   <td>{row.type}</td>
-                  <td><span className={`badge badge-${row.status === 'AIRWORTHY' ? 'green' : row.status === 'IN_MAINTENANCE' ? 'blue' : 'red'}`}>{row.status}</span></td>
-                  <td>{row.homeBase}</td>
-                  <td>{row.hoursTotal}</td>
+                  <td>{row.lastMaintenance ? new Date(row.lastMaintenance).toLocaleDateString() : 'Never'}</td>
                 </>
               ) : (
                 <>

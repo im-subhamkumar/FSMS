@@ -40,7 +40,7 @@ export default function AssignedRepairOverview() {
         <table className="dashboard-table">
           <thead>
             <tr>
-              <th>Tail No.</th>
+              <th>Plane</th>
               <th>Issue</th>
               <th>Assigned AME</th>
               <th>Due Date</th>

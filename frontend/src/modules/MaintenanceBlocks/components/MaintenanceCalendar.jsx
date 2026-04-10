@@ -85,7 +85,7 @@ export default function MaintenanceCalendar() {
                   <div className="cell-items">
                     {cellItems.map((item, i) => (
                       <div key={i} className={`calendar-item ${item.type === 'squawk' ? 'item-squawk' : 'item-activity'}`}>
-                        {item.type === 'squawk' ? `${item.aircraft?.tailNumber || ''} ${item.severity}` : `Log: ${item.aircraft?.tailNumber || ''}`}
+                        {item.type === 'squawk' ? `${item.aircraft?.name || 'Plane'} ${item.severity}` : `Log: ${item.aircraft?.name || 'Activity'}`}
                       </div>
                     ))}
                   </div>
@@ -110,7 +110,7 @@ export default function MaintenanceCalendar() {
             selectedItems.map((item, i) => (
               <div key={i} className="detail-card">
                 <div className="detail-header">
-                  <span className="detail-tail">{item.aircraft?.tailNumber || 'Unknown'}</span>
+                  <span className="detail-tail">{item.aircraft?.name || 'Log Entry'}</span>
                   <span className={`badge badge-${item.type === 'squawk' ? (item.severity === 'Critical' ? 'red' : 'orange') : 'blue'}`}>
                     {item.type === 'squawk' ? item.severity : 'Activity'}
                   </span>

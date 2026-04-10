@@ -58,7 +58,7 @@ export default function ActivityLog() {
                <div>
                  <div style={{ fontSize: '0.85rem' }}>{act.description}</div>
                  <div className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
-                   {act.userId ? `User #${act.userId} • ` : 'System • '}
+                   {act.user ? `${act.user.firstName} ${act.user.lastName} • ` : 'System • '}
                    {timeAgo(act.createdAt)}
                  </div>
                </div>
