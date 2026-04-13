@@ -1,0 +1,213 @@
+.calendar-split-view {
+  display: flex;
+  height: 100%;
+  gap: 24px;
+}
+
+.calendar-left {
+  flex: 7;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-right {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.02), transparent);
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot.red { background-color: var(--accent-red); }
+.dot.blue { background-color: var(--accent-blue); }
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  flex: 1;
+}
+
+.calendar-day-name {
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.calendar-cell {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  min-height: 100px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.calendar-cell:hover:not(.empty) {
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.calendar-cell.empty {
+  background-color: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+
+.calendar-cell.today {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.calendar-cell.today .day-number {
+  color: var(--accent-blue);
+  font-weight: bold;
+}
+
+.calendar-cell.selected {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 1px var(--accent-blue) inset;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.day-number {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  align-self: flex-end;
+}
+
+.cell-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  max-height: 70px;
+}
+
+.calendar-item {
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.item-squawk {
+  background-color: #dc2626;
+  color: #ffffff;
+  border-left: 3px solid #991b1b;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+.item-activity {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-left: 3px solid #1d4ed8;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+/* Scrollbar */
+.cell-items::-webkit-scrollbar { width: 2px; }
+.cell-items::-webkit-scrollbar-thumb { background: var(--border-color); }
+
+
+/* RIGHT PANEL STYLES */
+.side-panel-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.side-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.detail-card {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-tail {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text-main);
+}
+
+.detail-issue {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  word-wrap: break-word; /* Allows full text to wrap smoothly without truncation */
+}
+
+.detail-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 10px;
+}

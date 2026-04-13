@@ -1,0 +1,129 @@
+.repair-assignment-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.wizard-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  gap: 12px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.step-number {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.step.active .step-number {
+  background-color: var(--accent-blue);
+  color: white;
+}
+
+.border-only {
+  border: 1px solid var(--text-muted);
+  color: var(--text-muted);
+}
+
+.step-divider {
+  height: 1px;
+  background-color: var(--border-color);
+  flex-grow: 1;
+  max-width: 40px;
+}
+
+.selection-prompt {
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.aircraft-selection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.aircraft-item {
+  background-color: #15161C;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.aircraft-item.selected {
+  border-color: rgba(248, 113, 113, 0.4);
+  background-color: rgba(248, 113, 113, 0.05);
+}
+
+.aircraft-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.radio-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radio-btn.selected {
+  border-color: var(--accent-blue);
+}
+
+.radio-inner {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--accent-blue);
+}
+
+.issue-text {
+  font-size: 0.9rem;
+  color: #D1D5DB;
+}
+
+.view-details {
+  font-size: 0.8rem;
+  color: var(--accent-blue);
+  text-decoration: none;
+  align-self: flex-end;
+}
+
+.primary-button {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--accent-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.primary-button:hover {
+  background-color: #2563EB;
+}
