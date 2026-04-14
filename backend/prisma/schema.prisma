@@ -20,6 +20,8 @@ model User {
   updatedAt  DateTime    @updatedAt
   instructor Instructor?
 
+  studentDocuments    Document[] @relation("StudentDocs")
+  instructorDocuments Document[] @relation("InstructorDocs")
   assignedAircraft Aircraft[] @relation("AssignedAme")
   createdAircraft  Aircraft[] @relation("AircraftCreator")
   reportedSquawks  Squawk[]   @relation("SquawkReporter")
@@ -140,6 +142,7 @@ enum Role {
   STUDENT
   STAFF
 }
+
 
 enum InstructorDesignation {
   CHIEF_FLIGHT_INSTRUCTOR
@@ -310,6 +313,22 @@ model StudentAccount {
   @@map("student_accounts")
 }
 
+model Aircraft {
+  id              String    @id @db.VarChar(50)
+  name            String    @db.VarChar(100)
+  model           String    @db.VarChar(100)
+  status          String    @default("Active") @db.VarChar(50)
+  capacity        Int?      @default(0)
+  fuelCapacity    Int?      @default(0)
+  type            String    @default("Passenger") @db.VarChar(50)
+  lastMaintenance DateTime? @db.Date
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  documents       Document[]
+
+  @@map("aircrafts")
 model WeatherCheck {
   id             Int      @id @default(autoincrement())
   timestamp      DateTime @default(now())
@@ -332,4 +351,67 @@ model WeatherCheck {
   @@index([icao])
   @@index([timestamp])
   @@map("weather_checks")
+}
+
+// ──────────────────────────────────────────────────────────────
+// DMS Models
+// ──────────────────────────────────────────────────────────────
+
+model Document {
+  id             Int               @id @default(autoincrement())
+  title          String            @db.VarChar(255)
+  categoryId     Int
+  category       DocumentCategory  @relation(fields: [categoryId], references: [id])
+  status         DocumentStatus    @default(ACTIVE)
+  
+  // Relations to track who/what the document belongs to
+  studentId      Int?
+  instructorId   Int?
+  aircraftId     String?           @db.VarChar(50)
+
+  student        User?             @relation("StudentDocs", fields: [studentId], references: [id])
+  instructor     User?             @relation("InstructorDocs", fields: [instructorId], references: [id])
+  aircraft       Aircraft?         @relation(fields: [aircraftId], references: [id])
+
+  expiryDate     DateTime?
+  versions       DocumentVersion[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id           Int      @id @default(autoincrement())
+  documentId   Int
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version      Int      @default(1)
+  fileUrl      String   @db.Text
+  originalName String   @db.VarChar(255)
+  mimeType     String   @db.VarChar(100)
+  size         Int
+  description  String?  @db.Text
+  uploadedById Int?
+  uploadedAt   DateTime @default(now())
+
+  @@map("document_versions")
+}
+
+model DocumentCategory {
+  id                   Int        @id @default(autoincrement())
+  name                 String     @unique @db.VarChar(100)
+  description          String?    @db.Text
+  requiresExpiry       Boolean    @default(false)
+  warningThresholdDays Int        @default(30)
+  documents            Document[]
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  @@map("document_categories")
+}
+
+enum DocumentStatus {
+  ACTIVE
+  EXPIRED
+  ARCHIVED
 }
