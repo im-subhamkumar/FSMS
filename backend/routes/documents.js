@@ -33,7 +33,7 @@ router.get('/', async (req, res) => {
     let where = {};
     if (studentId) where.studentId = parseInt(studentId);
     if (instructorId) where.instructorId = parseInt(instructorId);
-    if (aircraftId) where.aircraftId = parseInt(aircraftId);
+    if (aircraftId) where.aircraftId = aircraftId;
     if (categoryId) where.categoryId = parseInt(categoryId);
     if (status) where.status = status;
 
@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
         },
         student: { select: { firstName: true, lastName: true } },
         instructor: { select: { firstName: true, lastName: true } },
-        aircraft: { select: { registration: true } }
+        aircraft: { select: { name: true, model: true } }
       },
       orderBy: { updatedAt: 'desc' }
     });
@@ -92,7 +92,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     // Convert IDs to int or undefined
     const sId = studentId ? parseInt(studentId) : undefined;
     const iId = instructorId ? parseInt(instructorId) : undefined;
-    const aId = aircraftId ? parseInt(aircraftId) : undefined;
+    const aId = aircraftId || undefined;
     const cId = categoryId ? parseInt(categoryId) : undefined;
     
     const fileUrl = `${req.file.filename}`;

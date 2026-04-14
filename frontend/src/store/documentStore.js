@@ -8,6 +8,8 @@ export const useDocumentStore = create((set, get) => ({
     isLoading: false,
     error: null,
     
+    clearError: () => set({ error: null }),
+    
     fetchDocuments: async (filters = {}) => {
         set({ isLoading: true, error: null });
         try {
