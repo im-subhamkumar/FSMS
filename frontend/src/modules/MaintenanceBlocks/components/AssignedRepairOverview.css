@@ -1,0 +1,29 @@
+.assigned-repair-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.issue-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.issue-tag {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.badge-orange {
+  background-color: rgba(217, 119, 6, 0.1);
+  color: #F59E0B;
+  border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+.table-footer-note {
+  font-size: 0.75rem;
+  margin-top: 16px;
+  font-style: italic;
+}

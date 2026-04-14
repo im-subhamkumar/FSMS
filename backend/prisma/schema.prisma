@@ -22,6 +22,10 @@ model User {
 
   studentDocuments    Document[] @relation("StudentDocs")
   instructorDocuments Document[] @relation("InstructorDocs")
+  assignedAircraft Aircraft[] @relation("AssignedAme")
+  createdAircraft  Aircraft[] @relation("AircraftCreator")
+  reportedSquawks  Squawk[]   @relation("SquawkReporter")
+  activities       MaintenanceActivity[] @relation("ActivityUser")
 
   @@map("users")
 }
@@ -177,27 +181,83 @@ enum CurrencyStatus {
   EXPIRING_SOON
   NOT_CURRENT
 }
+
+// ── Aircraft status used by Maintenance module ──────────────────
+enum AircraftStatus {
+  AIRWORTHY
+  AOG
+  IN_MAINTENANCE
+}
+
+// ── Aircraft model — owned by Aircraft team, extended by Maintenance ──
+model Aircraft {
+  id              String         @id @db.VarChar(50)
+  name            String         @db.VarChar(100)
+  model           String         @db.VarChar(100)
+  status          String         @default("Active") @db.VarChar(50)
+  capacity        Int?           @default(0)
+  fuelCapacity    Int?           @default(0)
+  type            String         @default("Passenger") @db.VarChar(50)
+  lastMaintenance DateTime?      @db.Date
+  notes           String?        @db.Text
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Maintenance module relations
+  squawks         Squawk[]
+  assignedAmeId   Int?
+  assignedAme     User?          @relation("AssignedAme", fields: [assignedAmeId], references: [id])
+  createdBy       Int?
+  creator         User?          @relation("AircraftCreator", fields: [createdBy], references: [id])
+
+  @@map("aircrafts")
+}
+
+model Squawk {
+  id           Int      @id @default(autoincrement())
+  aircraftId   String
+  aircraft     Aircraft @relation(fields: [aircraftId], references: [id])
+  issue        String   @db.VarChar(255)
+  severity     String   @default("Normal") @db.VarChar(50)
+  status       String   @default("Open") @db.VarChar(50)
+  reportedById Int?
+  reporter     User?    @relation("SquawkReporter", fields: [reportedById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("squawks")
+}
+
+model MaintenanceActivity {
+  id          Int      @id @default(autoincrement())
+  description String   @db.Text
+  type        String   @db.VarChar(50)
+  userId      Int?
+  user        User?    @relation("ActivityUser", fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@map("maintenance_activities")
+}
+
 model Student {
   id          Int      @id @default(autoincrement())
   studentId   String   @unique @db.VarChar(20)
-
   firstName   String   @db.VarChar(100)
   lastName    String   @db.VarChar(100)
   email       String   @unique @db.VarChar(255)
-
   dob         DateTime
   gender      String   @db.VarChar(20)
   nationality String   @db.VarChar(100)
   phone       String?  @db.VarChar(20)
-
   address     String?  @db.VarChar(255)
   city        String?  @db.VarChar(100)
   state       String?  @db.VarChar(100)
   pincode     String?  @db.VarChar(10)
 
+  batch       String?  @db.VarChar(50)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   licenses    StudentLicense[]
   medicals    StudentMedical[]
   documents   StudentDocument[]
@@ -209,30 +269,23 @@ model Student {
 model StudentLicense {
   id            Int      @id @default(autoincrement())
   studentId     Int
-
   licenseNumber String   @unique @db.VarChar(100)
   licenseType   String   @db.VarChar(50)
-
   issueDate     DateTime
   expiryDate    DateTime
-
   createdAt     DateTime @default(now())
-
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_licenses")
 }
 
 model StudentMedical {
-  id                        Int      @id @default(autoincrement())
-  studentId                 Int
-
-  medicalCertificateNumber  String   @unique @db.VarChar(100)
-  issueDate                 DateTime
-  expiryDate                DateTime
-
-  createdAt                 DateTime @default(now())
-
+  id                       Int      @id @default(autoincrement())
+  studentId                Int
+  medicalCertificateNumber String   @unique @db.VarChar(100)
+  issueDate                DateTime
+  expiryDate               DateTime
+  createdAt                DateTime @default(now())
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_medicals")
@@ -241,12 +294,9 @@ model StudentMedical {
 model StudentDocument {
   id           Int      @id @default(autoincrement())
   studentId    Int
-
   documentType String   @db.VarChar(100)
   fileUrl      String   @db.VarChar(255)
-
   uploadedAt   DateTime @default(now())
-
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_documents")
@@ -255,12 +305,9 @@ model StudentDocument {
 model StudentAccount {
   id           Int      @id @default(autoincrement())
   studentId    Int      @unique
-
   schoolEmail  String   @unique @db.VarChar(255)
   passwordHash String   @db.VarChar(255)
-
   createdAt    DateTime @default(now())
-
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_accounts")
@@ -282,6 +329,28 @@ model Aircraft {
   documents       Document[]
 
   @@map("aircrafts")
+model WeatherCheck {
+  id             Int      @id @default(autoincrement())
+  timestamp      DateTime @default(now())
+  icao           String   @db.VarChar(10)
+  stationName    String?  @db.VarChar(200)
+  studentType    String?  @db.VarChar(50)
+  verdict        String   @db.VarChar(20)
+  flightCategory String?  @db.VarChar(20)
+  windSpeed      Int?
+  windGust       Int?
+  visibilitySm   Float?
+  ceilingFt      Int?
+  temperatureC   Float?
+  metarRaw       String?  @db.Text
+  reasons        String?  @db.Text
+  warnings       String?  @db.Text
+  checkedBy      String   @default("system") @db.VarChar(100)
+  requestSource  String   @default("dashboard") @db.VarChar(100)
+
+  @@index([icao])
+  @@index([timestamp])
+  @@map("weather_checks")
 }
 
 // ──────────────────────────────────────────────────────────────
