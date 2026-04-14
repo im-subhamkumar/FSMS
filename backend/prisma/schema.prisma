@@ -8,6 +8,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ──────────────────────────────────────────────────────────────
+// Base User model — all team modules relate to this
+// ──────────────────────────────────────────────────────────────
 model User {
   id         Int         @id @default(autoincrement())
   email      String      @unique @db.VarChar(255)
@@ -18,11 +21,19 @@ model User {
   isActive   Boolean     @default(true)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
+
+  // T2 — Instructor relation
   instructor Instructor?
+
+  // T3 — Invoice relations
+  invoicesIssued    Invoice[] @relation("IssuedByUser")
 
   @@map("users")
 }
 
+// ──────────────────────────────────────────────────────────────
+// T2 Module — Instructors
+// ──────────────────────────────────────────────────────────────
 model Instructor {
   id                   Int                   @id @default(autoincrement())
   userId               Int                   @unique
@@ -129,50 +140,9 @@ model InstructorChangeLog {
   @@map("instructor_change_logs")
 }
 
-enum Role {
-  ADMIN
-  INSTRUCTOR
-  STUDENT
-  STAFF
-}
-
-enum InstructorDesignation {
-  CHIEF_FLIGHT_INSTRUCTOR
-  SENIOR_FLIGHT_INSTRUCTOR
-  FLIGHT_INSTRUCTOR
-  GROUND_INSTRUCTOR
-  SIMULATOR_INSTRUCTOR
-}
-
-enum InstructorDepartment {
-  FLYING
-  GROUND
-  SIMULATOR
-}
-
-enum EmploymentType {
-  FULL_TIME
-  PART_TIME
-  CONTRACT
-}
-
-enum EmploymentStatus {
-  ACTIVE
-  INACTIVE
-  ON_LEAVE
-}
-
-enum ExpiryStatus {
-  VALID
-  EXPIRING_SOON
-  EXPIRED
-}
-
-enum CurrencyStatus {
-  CURRENT
-  EXPIRING_SOON
-  NOT_CURRENT
-}
+// ──────────────────────────────────────────────────────────────
+// T1 Module — Students
+// ──────────────────────────────────────────────────────────────
 model Student {
   id          Int      @id @default(autoincrement())
   studentId   String   @unique @db.VarChar(20)
@@ -198,6 +168,7 @@ model Student {
   medicals    StudentMedical[]
   documents   StudentDocument[]
   account     StudentAccount?
+  invoices    Invoice[]
 
   @@map("students")
 }
@@ -260,4 +231,126 @@ model StudentAccount {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_accounts")
+}
+
+// ──────────────────────────────────────────────────────────────
+// T3 Module — Invoices
+// ──────────────────────────────────────────────────────────────
+model Invoice {
+  id            Int           @id @default(autoincrement())
+  invoiceNumber String        @unique @db.VarChar(50)
+  studentId     Int
+  student       Student       @relation(fields: [studentId], references: [id])
+  issuedById    Int
+  issuedBy      User          @relation("IssuedByUser", fields: [issuedById], references: [id])
+  status        InvoiceStatus @default(PENDING)
+  dueDate       DateTime?
+  issuedDate    DateTime      @default(now())
+  notes         String?       @db.Text
+  amount        Decimal       @db.Decimal(10, 2) @default(0)
+  paidAmount    Decimal       @db.Decimal(10, 2) @default(0)
+  items         InvoiceItem[]
+  payments      Payment[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          Int     @id @default(autoincrement())
+  invoiceId   Int
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String  @db.VarChar(255)
+  quantity    Int     @default(1)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  totalPrice  Decimal @db.Decimal(10, 2)
+
+  @@map("invoice_items")
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount    Decimal  @db.Decimal(10, 2)
+  paidAt    DateTime @default(now())
+  method    String?  @db.VarChar(50)
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("payments")
+}
+
+// ──────────────────────────────────────────────────────────────
+// Shared Enums
+// ──────────────────────────────────────────────────────────────
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+  STAFF
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum InstructorDesignation {
+  CHIEF_FLIGHT_INSTRUCTOR
+  SENIOR_FLIGHT_INSTRUCTOR
+  FLIGHT_INSTRUCTOR
+  GROUND_INSTRUCTOR
+  SIMULATOR_INSTRUCTOR
+}
+
+enum InstructorDepartment {
+  FLYING
+  GROUND
+  SIMULATOR
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+}
+
+enum ExpiryStatus {
+  VALID
+  EXPIRING_SOON
+  EXPIRED
+}
+
+enum CurrencyStatus {
+  CURRENT
+  EXPIRING_SOON
+  NOT_CURRENT
+}
+
+// ──────────────────────────────────────────────────────────────
+// T9 Module — Aircraft (merged from feature/Aircraft)
+// ──────────────────────────────────────────────────────────────
+model Aircraft {
+  id              String    @id @db.VarChar(50)
+  name            String    @db.VarChar(100)
+  model           String    @db.VarChar(100)
+  status          String    @default("Active") @db.VarChar(50)
+  capacity        Int?      @default(0)
+  fuelCapacity    Int?      @default(0)
+  type            String    @default("Passenger") @db.VarChar(50)
+  lastMaintenance DateTime? @db.Date
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("aircrafts")
 }

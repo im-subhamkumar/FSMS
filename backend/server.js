@@ -88,6 +88,13 @@ app.use('/api/instructors', instructorsRouter);
 // Serve uploaded files as static assets
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// T3 — Invoices & Reports Dashboard
+import invoicesRouter from './routes/invoices.js';
+import reportsRouter from './routes/reports.js';
+app.use('/api/invoices', invoicesRouter);
+app.use('/api/reports', reportsRouter);
+
+
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });

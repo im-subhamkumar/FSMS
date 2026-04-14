@@ -19,11 +19,6 @@ RUN npm install
 # node_modules excluded via .dockerignore
 COPY . .
 
-# Generate Prisma client from schema
-RUN npx prisma generate
-
-# Expose Express port
-EXPOSE 3000
-
-# Start with nodemon for live reload during development
-CMD ["npm", "run", "dev"]
+# Wait script / explicit DB push happens at runtime using the new docker:dev script
+# This ensures it runs AFTER the database service is fully up
+CMD ["npm", "run", "docker:dev"]
