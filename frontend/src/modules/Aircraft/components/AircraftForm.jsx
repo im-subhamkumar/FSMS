@@ -67,7 +67,7 @@ const AircraftForm = ({ onAdded }) => {
 
       {/* Form */}
       {showForm && (
-        <div className="bg-slate-800 p-6 rounded-xl space-y-4">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 shadow-sm p-6 rounded-xl space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <input name="id" placeholder="Aircraft ID" className="input" onChange={handleChange} />
             <input name="name" placeholder="Name" className="input" onChange={handleChange} />

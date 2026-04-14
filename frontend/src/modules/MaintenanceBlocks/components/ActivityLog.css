@@ -1,0 +1,82 @@
+.activity-log-card {
+  margin-top: 0;
+}
+
+.activity-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.activity-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.column-header {
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.log-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.log-indicator {
+  margin-top: 4px;
+}
+
+.log-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.log-title {
+  font-size: 0.85rem;
+  color: #D1D5DB;
+}
+
+.log-meta {
+  font-size: 0.75rem;
+  color: var(--text-dark);
+}
+
+.dot-yellow {
+  background-color: var(--accent-yellow);
+}
+
+.dot-blue {
+  background-color: var(--accent-blue);
+}
+
+/* Approval Item Specific */
+.approval-item {
+  flex-direction: column;
+  gap: 6px;
+  background-color: #15161C;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.log-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.approval-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #D1D5DB;
+}
+
+.log-desc {
+  font-size: 0.8rem;
+}

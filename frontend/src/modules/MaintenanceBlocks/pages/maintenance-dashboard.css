@@ -1,0 +1,141 @@
+.maintenance-dashboard-root {
+  /* Default Light Theme Colors */
+  --bg-main: #F3F4F6;
+  --bg-card: #FFFFFF;
+  --bg-hover: #F9FAFB;
+  --border-color: #E5E7EB;
+  --text-main: #111827;
+  --text-muted: #6B7280;
+  
+  /* Accents (Light Theme adjustments) */
+  --accent-green: #10B981;
+  --accent-green-bg: rgba(16, 185, 129, 0.15);
+  --accent-red: #EF4444;
+  --accent-red-bg: rgba(239, 68, 68, 0.15);
+  --accent-yellow: #F59E0B;
+  --accent-yellow-bg: rgba(245, 158, 11, 0.15);
+  --accent-orange: #F97316;
+  --accent-orange-bg: rgba(249, 115, 22, 0.15);
+  --accent-blue: #2563EB;
+  --accent-blue-bg: rgba(37, 99, 235, 0.15);
+
+  /* Fonts */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  /* Base applying */
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-family);
+  -webkit-font-smoothing: antialiased;
+  padding: 24px;
+  min-height: 100vh;
+}
+
+.dark .maintenance-dashboard-root {
+  --bg-main: #13141C;
+  --bg-card: #1C1D26;
+  --bg-hover: #252631;
+  --border-color: #2F313D;
+  --text-main: #FFFFFF;
+  --text-muted: #8F95A1;
+  
+  --accent-green: #34D399;
+  --accent-green-bg: rgba(52, 211, 153, 0.15);
+  --accent-red: #F87171;
+  --accent-red-bg: rgba(248, 113, 113, 0.15);
+  --accent-yellow: #FACC15;
+  --accent-yellow-bg: rgba(250, 204, 21, 0.15);
+  --accent-orange: #FB923C;
+  --accent-orange-bg: rgba(251, 146, 60, 0.15);
+  --accent-blue: #3B82F6;
+  --accent-blue-bg: rgba(59, 130, 246, 0.15);
+}
+
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  gap: 4px;
+  border: 1px solid transparent;
+}
+
+.badge-green { background-color: var(--accent-green-bg); color: var(--accent-green); border-color: rgba(52, 211, 153, 0.3); }
+.badge-red { background-color: var(--accent-red-bg); color: var(--accent-red); border-color: rgba(248, 113, 113, 0.3); }
+.badge-yellow { background-color: var(--accent-yellow-bg); color: var(--accent-yellow); border-color: rgba(250, 204, 21, 0.3); }
+.badge-orange { background-color: var(--accent-orange-bg); color: var(--accent-orange); border-color: rgba(251, 146, 60, 0.3); }
+.badge-blue { background-color: var(--accent-blue-bg); color: var(--accent-blue); border-color: rgba(59, 130, 246, 0.3); }
+
+.text-muted { color: var(--text-muted); }
+.text-main { color: var(--text-main); }
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.view-all {
+  font-size: 0.8rem;
+  color: var(--accent-blue);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dashboard-table th {
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.8rem;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dashboard-table td {
+  padding: 14px 0;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dashboard-table tr:last-child td {
+  border-bottom: none;
+}
+
+.grid-layout {
+  display: grid;
+  grid-template-columns: 45fr 55fr;
+  gap: 24px;
+}
+
+.grid-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}

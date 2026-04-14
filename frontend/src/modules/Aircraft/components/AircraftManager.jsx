@@ -51,14 +51,14 @@ const AircraftManager = () => {
   }, [search, statusFilter, typeFilter, aircrafts]);
 
   return (
-    <div className="p-6 text-white">
+    <div className="p-6 text-slate-900 dark:text-white">
       <h1 className="text-2xl font-bold mb-4">Aircrafts</h1>
 
       {/* Form */}
       <AircraftForm onAdded={loadData} />
 
       {/* Search + Filter */}
-      <div className="bg-slate-800 p-4 rounded-xl mb-4 flex items-center gap-4">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 shadow-sm p-4 rounded-xl mb-4 flex items-center gap-4">
 
         {/* Search */}
         <input
