@@ -90,10 +90,10 @@ export function InstructorList() {
   };
 
   const stats = useMemo(() => [
-    { label: 'Total Instructors', value: pagination.total || 0, icon: User, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Medical Expiring', value: instructors.filter(i => i.medicalStatus === 'EXPIRING_SOON').length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'License Valid', value: instructors.filter(i => i.licenseStatus === 'VALID').length, icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'On Leave', value: instructors.filter(i => i.employmentStatus === 'ON_LEAVE').length, icon: MapPin, color: 'text-gray-600', bg: 'bg-gray-100' },
+    { label: 'Total Instructors', value: pagination.total || 0, icon: User, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+    { label: 'Medical Expiring', value: instructors.filter(i => i.medicalStatus === 'EXPIRING_SOON').length, icon: Clock, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+    { label: 'License Valid', value: instructors.filter(i => i.licenseStatus === 'VALID').length, icon: ShieldCheck, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+    { label: 'On Leave', value: instructors.filter(i => i.employmentStatus === 'ON_LEAVE').length, icon: MapPin, color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-slate-800/50' },
   ], [instructors, pagination.total]);
 
   return (
@@ -116,20 +116,20 @@ export function InstructorList() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className={`${stat.bg} p-4 rounded-2xl border border-white/50 shadow-sm flex items-center justify-between`}
+            className={`${stat.bg} p-4 rounded-2xl border border-white/50 dark:border-slate-700 shadow-sm flex items-center justify-between`}
           >
             <div>
               <p className="text-gray-500 text-sm font-medium">{stat.label}</p>
               <h3 className="text-2xl font-bold mt-1 text-gray-900">{stat.value}</h3>
             </div>
-            <div className={`p-3 rounded-xl bg-white shadow-sm ${stat.color}`}>
+            <div className={`p-3 rounded-xl bg-white dark:bg-slate-800 shadow-sm ${stat.color}`}>
               <stat.icon className="h-6 w-6" />
             </div>
           </motion.div>
         ))}
       </div>
 
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden">
         {/* Toolbar */}
         <div className="p-4 border-b border-gray-50 flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="relative w-full md:w-96">
@@ -137,7 +137,7 @@ export function InstructorList() {
             <input
               type="text"
               placeholder="Search by name, email, or employee ID..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all text-sm"
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700/50 border border-transparent dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-blue-500 outline-none transition-all text-sm dark:text-white"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -174,17 +174,17 @@ export function InstructorList() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="px-4 py-3 bg-gray-50/50 border-b border-gray-50 grid grid-cols-1 sm:grid-cols-3 gap-2 overflow-hidden"
+              className="px-4 py-3 bg-gray-50/50 dark:bg-slate-700/30 border-b border-gray-50 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-3 gap-2 overflow-hidden"
             >
               <select
-                className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
                 value={filters.designation}
                 onChange={(e) => setFilters({ ...filters, designation: e.target.value })}
               >
                 {FILTER_DESIGNATIONS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
               </select>
               <select
-                className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
               >
@@ -206,7 +206,7 @@ export function InstructorList() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50/50">
+              <tr className="bg-gray-50/50 dark:bg-slate-700/50">
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Instructor</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Designation</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Contact</th>
@@ -234,7 +234,7 @@ export function InstructorList() {
                 </tr>
               ) : (
                 instructors.map((inst) => (
-                  <tr key={inst.id} className="hover:bg-gray-50/50 transition-colors group cursor-pointer" onClick={() => navigate(`/instructors/${inst.id}`)}>
+                  <tr key={inst.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors group cursor-pointer" onClick={() => navigate(`/instructors/${inst.id}`)}>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
                         <Avatar instructor={inst} />

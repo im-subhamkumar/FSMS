@@ -1,0 +1,33 @@
+.stat-cards-container {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.stat-title {
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.stat-footer {
+  margin-top: auto;
+}

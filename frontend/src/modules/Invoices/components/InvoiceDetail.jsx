@@ -1,4 +1,4 @@
-// T3 — InvoiceDetail (T10-aligned: invoiceNumber, amount, 3 statuses + react-to-print)
+// T3 — InvoiceDetail ( invoiceNumber, amount, 3 statuses + react-to-print)
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
@@ -13,7 +13,7 @@ const fmt     = (val) => new Intl.NumberFormat('en-IN', { minimumFractionDigits:
 const fmtDate = (d)   => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 const fmtDateTime = (d) => d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 
-// Status transitions per T10 spec: PENDING ↔ PAID ↔ OVERDUE
+//  spec: PENDING ↔ PAID ↔ OVERDUE
 const STATUS_ACTIONS = {
   PENDING: [
     { label: 'Record Payment', icon: IndianRupee,    id: 'RECORD_PAYMENT', color: 'bg-green-600 hover:bg-green-700 text-white' },

@@ -1,24 +1,29 @@
 # ============================================================
-# FSMS Backend Dockerfile — Node 18 Slim + Nodemon
+# FSMS Backend Dockerfile — Node 20 Slim
 # ============================================================
 FROM node:20-slim
 
-# Install OpenSSL and wget (needed by Prisma and compose healthcheck respectively)
-RUN apt-get update && apt-get install -y openssl wget && rm -rf /var/lib/apt/lists/*
+# Install OpenSSL 3.0.x and wget (needed by Prisma and healthchecks)
+RUN apt-get update && apt-get install -y openssl wget curl && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Copy dependency manifests first (better layer caching)
+# Copy dependency manifests first
 COPY package.json package-lock.json* ./
 
-# Install all dependencies including devDependencies (nodemon)
+# Install all dependencies
 RUN npm install
 
 # Copy source code
-# node_modules excluded via .dockerignore
 COPY . .
 
-# Wait script / explicit DB push happens at runtime using the new docker:dev script
-# This ensures it runs AFTER the database service is fully up
-CMD ["npm", "run", "docker:dev"]
+# Explicitly generate Prisma client for the current container environment
+# Using --no-engine might help if we want to reduce size, but we need the engine.
+RUN npx prisma generate
+
+# Expose Express port
+EXPOSE 3000
+
+# Start with nodemon
+CMD ["npm", "run", "dev"]

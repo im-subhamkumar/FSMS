@@ -8,9 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ──────────────────────────────────────────────────────────────
-// Base User model — all team modules relate to this
-// ──────────────────────────────────────────────────────────────
 model User {
   id         Int         @id @default(autoincrement())
   email      String      @unique @db.VarChar(255)
@@ -21,12 +18,23 @@ model User {
   isActive   Boolean     @default(true)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
-
-  // T2 — Instructor relation
   instructor Instructor?
 
+  // DMS relations
+  studentDocuments    Document[] @relation("StudentDocs")
+  instructorDocuments Document[] @relation("InstructorDocs")
+
+  // Maintenance relations
+  assignedAircraft Aircraft[] @relation("AssignedAme")
+  createdAircraft  Aircraft[] @relation("AircraftCreator")
+  reportedSquawks  Squawk[]   @relation("SquawkReporter")
+  activities       MaintenanceActivity[] @relation("ActivityUser")
+
   // T3 — Invoice relations
-  invoicesIssued    Invoice[] @relation("IssuedByUser")
+  invoicesIssued Invoice[] @relation("IssuedByUser")
+
+  // T9 — Course relations
+  coursesCreated Course[]
 
   @@map("users")
 }
@@ -141,25 +149,133 @@ model InstructorChangeLog {
 }
 
 // ──────────────────────────────────────────────────────────────
+// Enums
+// ──────────────────────────────────────────────────────────────
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+  STAFF
+}
+
+enum InstructorDesignation {
+  CHIEF_FLIGHT_INSTRUCTOR
+  SENIOR_FLIGHT_INSTRUCTOR
+  FLIGHT_INSTRUCTOR
+  GROUND_INSTRUCTOR
+  SIMULATOR_INSTRUCTOR
+}
+
+enum InstructorDepartment {
+  FLYING
+  GROUND
+  SIMULATOR
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+}
+
+enum ExpiryStatus {
+  VALID
+  EXPIRING_SOON
+  EXPIRED
+}
+
+enum CurrencyStatus {
+  CURRENT
+  EXPIRING_SOON
+  NOT_CURRENT
+}
+
+// ── Aircraft status used by Maintenance module ──────────────────
+enum AircraftStatus {
+  AIRWORTHY
+  AOG
+  IN_MAINTENANCE
+}
+
+// ──────────────────────────────────────────────────────────────
+// Aircraft — unified model (Maintenance + DMS relations merged)
+// ──────────────────────────────────────────────────────────────
+model Aircraft {
+  id              String         @id @db.VarChar(50)
+  name            String         @db.VarChar(100)
+  model           String         @db.VarChar(100)
+  status          String         @default("Active") @db.VarChar(50)
+  capacity        Int?           @default(0)
+  fuelCapacity    Int?           @default(0)
+  type            String         @default("Passenger") @db.VarChar(50)
+  lastMaintenance DateTime?      @db.Date
+  notes           String?        @db.Text
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Maintenance module relations
+  squawks         Squawk[]
+  assignedAmeId   Int?
+  assignedAme     User?          @relation("AssignedAme", fields: [assignedAmeId], references: [id])
+  createdBy       Int?
+  creator         User?          @relation("AircraftCreator", fields: [createdBy], references: [id])
+
+  // DMS relation
+  documents       Document[]
+
+  @@map("aircrafts")
+}
+
+model Squawk {
+  id           Int      @id @default(autoincrement())
+  aircraftId   String
+  aircraft     Aircraft @relation(fields: [aircraftId], references: [id])
+  issue        String   @db.VarChar(255)
+  severity     String   @default("Normal") @db.VarChar(50)
+  status       String   @default("Open") @db.VarChar(50)
+  reportedById Int?
+  reporter     User?    @relation("SquawkReporter", fields: [reportedById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("squawks")
+}
+
+model MaintenanceActivity {
+  id          Int      @id @default(autoincrement())
+  description String   @db.Text
+  type        String   @db.VarChar(50)
+  userId      Int?
+  user        User?    @relation("ActivityUser", fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@map("maintenance_activities")
+}
+
+// ──────────────────────────────────────────────────────────────
 // T1 Module — Students
 // ──────────────────────────────────────────────────────────────
 model Student {
   id          Int      @id @default(autoincrement())
   studentId   String   @unique @db.VarChar(20)
-
   firstName   String   @db.VarChar(100)
   lastName    String   @db.VarChar(100)
   email       String   @unique @db.VarChar(255)
-
   dob         DateTime
   gender      String   @db.VarChar(20)
   nationality String   @db.VarChar(100)
   phone       String?  @db.VarChar(20)
-
   address     String?  @db.VarChar(255)
   city        String?  @db.VarChar(100)
   state       String?  @db.VarChar(100)
   pincode     String?  @db.VarChar(10)
+  batch       String?  @db.VarChar(50)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -176,30 +292,23 @@ model Student {
 model StudentLicense {
   id            Int      @id @default(autoincrement())
   studentId     Int
-
   licenseNumber String   @unique @db.VarChar(100)
   licenseType   String   @db.VarChar(50)
-
   issueDate     DateTime
   expiryDate    DateTime
-
   createdAt     DateTime @default(now())
-
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_licenses")
 }
 
 model StudentMedical {
-  id                        Int      @id @default(autoincrement())
-  studentId                 Int
-
-  medicalCertificateNumber  String   @unique @db.VarChar(100)
-  issueDate                 DateTime
-  expiryDate                DateTime
-
-  createdAt                 DateTime @default(now())
-
+  id                       Int      @id @default(autoincrement())
+  studentId                Int
+  medicalCertificateNumber String   @unique @db.VarChar(100)
+  issueDate                DateTime
+  expiryDate               DateTime
+  createdAt                DateTime @default(now())
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_medicals")
@@ -208,12 +317,9 @@ model StudentMedical {
 model StudentDocument {
   id           Int      @id @default(autoincrement())
   studentId    Int
-
   documentType String   @db.VarChar(100)
   fileUrl      String   @db.VarChar(255)
-
   uploadedAt   DateTime @default(now())
-
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_documents")
@@ -222,15 +328,101 @@ model StudentDocument {
 model StudentAccount {
   id           Int      @id @default(autoincrement())
   studentId    Int      @unique
-
   schoolEmail  String   @unique @db.VarChar(255)
   passwordHash String   @db.VarChar(255)
-
   createdAt    DateTime @default(now())
-
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_accounts")
+}
+
+// ──────────────────────────────────────────────────────────────
+// Weather Module
+// ──────────────────────────────────────────────────────────────
+model WeatherCheck {
+  id             Int      @id @default(autoincrement())
+  timestamp      DateTime @default(now())
+  icao           String   @db.VarChar(10)
+  stationName    String?  @db.VarChar(200)
+  studentType    String?  @db.VarChar(50)
+  verdict        String   @db.VarChar(20)
+  flightCategory String?  @db.VarChar(20)
+  windSpeed      Int?
+  windGust       Int?
+  visibilitySm   Float?
+  ceilingFt      Int?
+  temperatureC   Float?
+  metarRaw       String?  @db.Text
+  reasons        String?  @db.Text
+  warnings       String?  @db.Text
+  checkedBy      String   @default("system") @db.VarChar(100)
+  requestSource  String   @default("dashboard") @db.VarChar(100)
+
+  @@index([icao])
+  @@index([timestamp])
+  @@map("weather_checks")
+}
+
+// ──────────────────────────────────────────────────────────────
+// DMS Models
+// ──────────────────────────────────────────────────────────────
+model Document {
+  id             Int               @id @default(autoincrement())
+  title          String            @db.VarChar(255)
+  categoryId     Int
+  category       DocumentCategory  @relation(fields: [categoryId], references: [id])
+  status         DocumentStatus    @default(ACTIVE)
+
+  // Relations to track who/what the document belongs to
+  studentId      Int?
+  instructorId   Int?
+  aircraftId     String?           @db.VarChar(50)
+
+  student        User?             @relation("StudentDocs", fields: [studentId], references: [id])
+  instructor     User?             @relation("InstructorDocs", fields: [instructorId], references: [id])
+  aircraft       Aircraft?         @relation(fields: [aircraftId], references: [id])
+
+  expiryDate     DateTime?
+  versions       DocumentVersion[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id           Int      @id @default(autoincrement())
+  documentId   Int
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version      Int      @default(1)
+  fileUrl      String   @db.Text
+  originalName String   @db.VarChar(255)
+  mimeType     String   @db.VarChar(100)
+  size         Int
+  description  String?  @db.Text
+  uploadedById Int?
+  uploadedAt   DateTime @default(now())
+
+  @@map("document_versions")
+}
+
+model DocumentCategory {
+  id                   Int        @id @default(autoincrement())
+  name                 String     @unique @db.VarChar(100)
+  description          String?    @db.Text
+  requiresExpiry       Boolean    @default(false)
+  warningThresholdDays Int        @default(30)
+  documents            Document[]
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  @@map("document_categories")
+}
+
+enum DocumentStatus {
+  ACTIVE
+  EXPIRED
+  ARCHIVED
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -282,75 +474,76 @@ model Payment {
   @@map("payments")
 }
 
-// ──────────────────────────────────────────────────────────────
-// Shared Enums
-// ──────────────────────────────────────────────────────────────
-enum Role {
-  ADMIN
-  INSTRUCTOR
-  STUDENT
-  STAFF
-}
-
 enum InvoiceStatus {
   PENDING
   PAID
   OVERDUE
 }
 
-enum InstructorDesignation {
-  CHIEF_FLIGHT_INSTRUCTOR
-  SENIOR_FLIGHT_INSTRUCTOR
-  FLIGHT_INSTRUCTOR
-  GROUND_INSTRUCTOR
-  SIMULATOR_INSTRUCTOR
+// ──────────────────────────────────────────────────────────────
+// T9 Module — Courses (models inferred from routes/courses.js)
+// ──────────────────────────────────────────────────────────────
+model Course {
+  id            Int           @id @default(autoincrement())
+  code          String        @unique @db.VarChar(50)
+  name          String        @db.VarChar(200)
+  description   String?       @db.Text
+  level         CourseLevel   @default(OTHER)
+  durationHours Float         @default(0)
+  price         Decimal       @db.Decimal(10, 2) @default(0)
+  isActive      Boolean       @default(true)
+  createdBy     Int?
+  creator       User?         @relation(fields: [createdBy], references: [id])
+  pricingRates  PricingRate[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("courses")
 }
 
-enum InstructorDepartment {
-  FLYING
-  GROUND
-  SIMULATOR
-}
-
-enum EmploymentType {
-  FULL_TIME
-  PART_TIME
-  CONTRACT
-}
-
-enum EmploymentStatus {
-  ACTIVE
-  INACTIVE
-  ON_LEAVE
-}
-
-enum ExpiryStatus {
-  VALID
-  EXPIRING_SOON
-  EXPIRED
-}
-
-enum CurrencyStatus {
-  CURRENT
-  EXPIRING_SOON
-  NOT_CURRENT
+enum CourseLevel {
+  PPL
+  CPL
+  ATPL
+  IFR
+  MULTI_ENGINE
+  GROUND_SCHOOL
+  OTHER
 }
 
 // ──────────────────────────────────────────────────────────────
-// T9 Module — Aircraft (merged from feature/Aircraft)
+// T14 Module — Pricing Rates (models inferred from routes/pricingRates.js)
 // ──────────────────────────────────────────────────────────────
-model Aircraft {
-  id              String    @id @db.VarChar(50)
-  name            String    @db.VarChar(100)
-  model           String    @db.VarChar(100)
-  status          String    @default("Active") @db.VarChar(50)
-  capacity        Int?      @default(0)
-  fuelCapacity    Int?      @default(0)
-  type            String    @default("Passenger") @db.VarChar(50)
-  lastMaintenance DateTime? @db.Date
-  notes           String?   @db.Text
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+model PricingRate {
+  id            Int              @id @default(autoincrement())
+  name          String           @db.VarChar(200)
+  category      PricingCategory
+  rateType      RateType         @default(FLAT)
+  amount        Decimal          @db.Decimal(10, 2) @default(0)
+  currency      String           @default("INR") @db.VarChar(10)
+  courseId       Int?
+  course        Course?          @relation(fields: [courseId], references: [id])
+  effectiveFrom DateTime         @default(now())
+  isActive      Boolean          @default(true)
+  notes         String?          @db.Text
+  createdBy     Int?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
-  @@map("aircrafts")
+  @@map("pricing_rates")
+}
+
+enum PricingCategory {
+  AIRCRAFT_RENTAL
+  INSTRUCTOR_FEE
+  COURSE_FEE
+  EXAM_FEE
+  GROUND_SCHOOL
+  OTHER
+}
+
+enum RateType {
+  HOURLY
+  FLAT
+  PER_SESSION
 }

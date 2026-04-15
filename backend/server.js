@@ -8,9 +8,14 @@ import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 // Load environment variables from .env file
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const prisma = new PrismaClient();
@@ -38,6 +43,11 @@ app.use(express.json());
 
 // Parse URL-encoded bodies (form submissions)
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Serve uploaded files as static assets
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ──────────────────────────────────────────
 // Routes
@@ -73,20 +83,23 @@ app.get('/', (req, res) => {
 });
 
 // ──────────────────────────────────────────
-// TODO: Mount team module routers below
+// Team Module Routers
 // ──────────────────────────────────────────
 import studentsRouter from './routes/students.js';
+import maintenanceRouter from './routes/maintenance.js';
 import instructorsRouter from './routes/instructors.js';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import weatherRouter from './routes/weather.js';
+import aircraftRouter from './routes/aircraft.js';
+import documentsRouter from './routes/documents.js';
+import documentCategoriesRouter from './routes/documentCategories.js';
 
 app.use('/api/students', studentsRouter);
+app.use('/api/maintenance', maintenanceRouter);
 app.use('/api/instructors', instructorsRouter);
-
-// Serve uploaded files as static assets
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/weather', weatherRouter);
+app.use('/api/aircraft', aircraftRouter);
+app.use('/api/documents', documentsRouter);
+app.use('/api/document-categories', documentCategoriesRouter);
 
 // T3 — Invoices & Reports Dashboard
 import invoicesRouter from './routes/invoices.js';
@@ -94,6 +107,11 @@ import reportsRouter from './routes/reports.js';
 app.use('/api/invoices', invoicesRouter);
 app.use('/api/reports', reportsRouter);
 
+// T9/T14 — Courses & Pricing Rates (route files exist but were not mounted upstream)
+import coursesRouter from './routes/courses.js';
+import pricingRatesRouter from './routes/pricingRates.js';
+app.use('/api/courses', coursesRouter);
+app.use('/api/pricing-rates', pricingRatesRouter);
 
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {

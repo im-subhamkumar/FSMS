@@ -10,7 +10,7 @@ import { useInvoices } from '../hooks/useInvoices';
 import StatusBadge from './StatusBadge';
 import InvoiceStats from './InvoiceStats';
 
-// T10 required: 3-status filter
+// 3-status filter
 const STATUS_OPTIONS = ['', 'PENDING', 'PAID', 'OVERDUE'];
 const PER_PAGE = 10;
 
@@ -164,7 +164,7 @@ export default function InvoiceList() {
         </button>
       </div>
 
-      {/* T10 required: Searchable invoice table */}
+      {/* Searchable invoice table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex-1">
         {error ? (
           <div className="flex flex-col items-center justify-center h-48 text-red-500 gap-2">
