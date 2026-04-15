@@ -26,6 +26,8 @@ model User {
   createdAircraft  Aircraft[] @relation("AircraftCreator")
   reportedSquawks  Squawk[]   @relation("SquawkReporter")
   activities       MaintenanceActivity[] @relation("ActivityUser")
+  createdCourses   Course[]   @relation("CourseCreator")
+  createdPricing   PricingRate[] @relation("PricingCreator")
 
   @@map("users")
 }
@@ -400,3 +402,109 @@ enum DocumentStatus {
   EXPIRED
   ARCHIVED
 }
+
+// ──────────────────────────────────────────────────────────────
+// Courses & Pricing
+// ──────────────────────────────────────────────────────────────
+
+enum CourseLevel {
+  PPL
+  CPL
+  ATPL
+  IFR
+  MULTI_ENGINE
+  GROUND_SCHOOL
+  OTHER
+}
+
+model Course {
+  id            Int           @id @default(autoincrement())
+  code          String        @unique @db.VarChar(50)
+  name          String        @db.VarChar(200)
+  description   String?       @db.Text
+  level         CourseLevel
+  durationHours Float
+  price         Decimal       @db.Decimal(10, 2)
+  isActive      Boolean       @default(true)
+  createdBy     Int?
+  creator       User?         @relation("CourseCreator", fields: [createdBy], references: [id])
+  pricingRates  PricingRate[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("courses")
+}
+
+enum PricingCategory {
+  AIRCRAFT_RENTAL
+  INSTRUCTOR_FEE
+  COURSE_FEE
+  EXAM_FEE
+  GROUND_SCHOOL
+  OTHER
+}
+
+enum RateType {
+  HOURLY
+  FLAT
+  PER_SESSION
+}
+
+model PricingRate {
+  id            Int             @id @default(autoincrement())
+  name          String          @db.VarChar(200)
+  category      PricingCategory
+  rateType      RateType
+  amount        Decimal         @db.Decimal(10, 2)
+  currency      String          @default("INR") @db.VarChar(10)
+  courseId      Int?
+  course        Course?         @relation(fields: [courseId], references: [id])
+  effectiveFrom DateTime        @default(now())
+  isActive      Boolean         @default(true)
+  notes         String?         @db.Text
+  createdBy     Int?
+  creator       User?           @relation("PricingCreator", fields: [createdBy], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([courseId])
+  @@map("pricing_rates")
+}
+
+// ──────────────────────────────────────────────────────────────
+// Qualification Types & Records
+// ──────────────────────────────────────────────────────────────
+
+model QualificationType {
+  id          Int                   @id @default(autoincrement())
+  code        String                @unique @db.VarChar(50)
+  name        String                @db.VarChar(200)
+  description String?               @db.Text
+  isActive    Boolean               @default(true)
+  records     QualificationRecord[]
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@map("qualification_types")
+}
+
+model QualificationRecord {
+  id                  Int               @id @default(autoincrement())
+  qualificationTypeId Int
+  qualificationType   QualificationType @relation(fields: [qualificationTypeId], references: [id])
+  studentId           Int?
+  instructorId        Int?
+  issueDate           DateTime          @db.Date
+  expiryDate          DateTime?         @db.Date
+  certificateNumber   String?           @db.VarChar(100)
+  issuingAuthority    String?           @db.VarChar(200)
+  notes               String?           @db.Text
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([qualificationTypeId])
+  @@index([studentId])
+  @@index([instructorId])
+  @@map("qualification_records")
+}
+

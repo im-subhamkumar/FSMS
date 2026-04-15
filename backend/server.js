@@ -95,6 +95,8 @@ import documentsRouter from './routes/documents.js';
 import documentCategoriesRouter from './routes/documentCategories.js';
 import coursesRouter from './routes/courses.js';
 import pricingRatesRouter from './routes/pricingRates.js';
+import qualificationTypesRouter from './routes/qualificationTypes.js';
+import qualificationRecordsRouter from './routes/qualificationRecords.js';
 
 app.use('/api/students', studentsRouter);
 app.use('/api/maintenance', maintenanceRouter);
@@ -105,14 +107,16 @@ app.use('/api/documents', documentsRouter);
 app.use('/api/document-categories', documentCategoriesRouter);
 app.use('/api/courses', coursesRouter);
 app.use('/api/pricing-rates', pricingRatesRouter);
+app.use('/api/qualification-types', qualificationTypesRouter);
+app.use('/api/qualification-records', qualificationRecordsRouter);
 
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
 });
 
-// Global error handler
-app.use((err, res, _next) => {
+// Global error handler — must have exactly 4 params for Express to treat as error handler
+app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error', details: err.message });
 });
