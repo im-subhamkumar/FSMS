@@ -8,7 +8,7 @@ import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-import path from 'path';
+
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -93,6 +93,8 @@ import weatherRouter from './routes/weather.js';
 import aircraftRouter from './routes/aircraft.js';
 import documentsRouter from './routes/documents.js';
 import documentCategoriesRouter from './routes/documentCategories.js';
+import coursesRouter from './routes/courses.js';
+import pricingRatesRouter from './routes/pricingRates.js';
 
 app.use('/api/students', studentsRouter);
 app.use('/api/maintenance', maintenanceRouter);
@@ -101,6 +103,8 @@ app.use('/api/weather', weatherRouter);
 app.use('/api/aircraft', aircraftRouter);
 app.use('/api/documents', documentsRouter);
 app.use('/api/document-categories', documentCategoriesRouter);
+app.use('/api/courses', coursesRouter);
+app.use('/api/pricing-rates', pricingRatesRouter);
 
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {

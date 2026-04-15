@@ -209,6 +209,7 @@ model Aircraft {
   assignedAme     User?          @relation("AssignedAme", fields: [assignedAmeId], references: [id])
   createdBy       Int?
   creator         User?          @relation("AircraftCreator", fields: [createdBy], references: [id])
+  documents       Document[]
 
   @@map("aircrafts")
 }
@@ -313,22 +314,6 @@ model StudentAccount {
   @@map("student_accounts")
 }
 
-model Aircraft {
-  id              String    @id @db.VarChar(50)
-  name            String    @db.VarChar(100)
-  model           String    @db.VarChar(100)
-  status          String    @default("Active") @db.VarChar(50)
-  capacity        Int?      @default(0)
-  fuelCapacity    Int?      @default(0)
-  type            String    @default("Passenger") @db.VarChar(50)
-  lastMaintenance DateTime? @db.Date
-  notes           String?   @db.Text
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  documents       Document[]
-
-  @@map("aircrafts")
 model WeatherCheck {
   id             Int      @id @default(autoincrement())
   timestamp      DateTime @default(now())
