@@ -8,6 +8,7 @@ import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -92,6 +93,10 @@ import weatherRouter from './routes/weather.js';
 import aircraftRouter from './routes/aircraft.js';
 import documentsRouter from './routes/documents.js';
 import documentCategoriesRouter from './routes/documentCategories.js';
+import coursesRouter from './routes/courses.js';
+import pricingRatesRouter from './routes/pricingRates.js';
+import qualificationTypesRouter from './routes/qualificationTypes.js';
+import qualificationRecordsRouter from './routes/qualificationRecords.js';
 
 app.use('/api/students', studentsRouter);
 app.use('/api/maintenance', maintenanceRouter);
@@ -100,26 +105,18 @@ app.use('/api/weather', weatherRouter);
 app.use('/api/aircraft', aircraftRouter);
 app.use('/api/documents', documentsRouter);
 app.use('/api/document-categories', documentCategoriesRouter);
-
-// T3 — Invoices & Reports Dashboard
-import invoicesRouter from './routes/invoices.js';
-import reportsRouter from './routes/reports.js';
-app.use('/api/invoices', invoicesRouter);
-app.use('/api/reports', reportsRouter);
-
-// T9/T14 — Courses & Pricing Rates (route files exist but were not mounted upstream)
-import coursesRouter from './routes/courses.js';
-import pricingRatesRouter from './routes/pricingRates.js';
 app.use('/api/courses', coursesRouter);
 app.use('/api/pricing-rates', pricingRatesRouter);
+app.use('/api/qualification-types', qualificationTypesRouter);
+app.use('/api/qualification-records', qualificationRecordsRouter);
 
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
 });
 
-// Global error handler
-app.use((err, req, res, _next) => {
+// Global error handler — must have exactly 4 params for Express to treat as error handler
+app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error', details: err.message });
 });

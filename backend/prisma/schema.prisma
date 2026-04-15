@@ -20,28 +20,18 @@ model User {
   updatedAt  DateTime    @updatedAt
   instructor Instructor?
 
-  // DMS relations
   studentDocuments    Document[] @relation("StudentDocs")
   instructorDocuments Document[] @relation("InstructorDocs")
-
-  // Maintenance relations
   assignedAircraft Aircraft[] @relation("AssignedAme")
   createdAircraft  Aircraft[] @relation("AircraftCreator")
   reportedSquawks  Squawk[]   @relation("SquawkReporter")
   activities       MaintenanceActivity[] @relation("ActivityUser")
-
-  // T3 — Invoice relations
-  invoicesIssued Invoice[] @relation("IssuedByUser")
-
-  // T9 — Course relations
-  coursesCreated Course[]
+  createdCourses   Course[]   @relation("CourseCreator")
+  createdPricing   PricingRate[] @relation("PricingCreator")
 
   @@map("users")
 }
 
-// ──────────────────────────────────────────────────────────────
-// T2 Module — Instructors
-// ──────────────────────────────────────────────────────────────
 model Instructor {
   id                   Int                   @id @default(autoincrement())
   userId               Int                   @unique
@@ -148,15 +138,13 @@ model InstructorChangeLog {
   @@map("instructor_change_logs")
 }
 
-// ──────────────────────────────────────────────────────────────
-// Enums
-// ──────────────────────────────────────────────────────────────
 enum Role {
   ADMIN
   INSTRUCTOR
   STUDENT
   STAFF
 }
+
 
 enum InstructorDesignation {
   CHIEF_FLIGHT_INSTRUCTOR
@@ -203,9 +191,7 @@ enum AircraftStatus {
   IN_MAINTENANCE
 }
 
-// ──────────────────────────────────────────────────────────────
-// Aircraft — unified model (Maintenance + DMS relations merged)
-// ──────────────────────────────────────────────────────────────
+// ── Aircraft model — owned by Aircraft team, extended by Maintenance ──
 model Aircraft {
   id              String         @id @db.VarChar(50)
   name            String         @db.VarChar(100)
@@ -225,8 +211,6 @@ model Aircraft {
   assignedAme     User?          @relation("AssignedAme", fields: [assignedAmeId], references: [id])
   createdBy       Int?
   creator         User?          @relation("AircraftCreator", fields: [createdBy], references: [id])
-
-  // DMS relation
   documents       Document[]
 
   @@map("aircrafts")
@@ -258,9 +242,6 @@ model MaintenanceActivity {
   @@map("maintenance_activities")
 }
 
-// ──────────────────────────────────────────────────────────────
-// T1 Module — Students
-// ──────────────────────────────────────────────────────────────
 model Student {
   id          Int      @id @default(autoincrement())
   studentId   String   @unique @db.VarChar(20)
@@ -275,16 +256,15 @@ model Student {
   city        String?  @db.VarChar(100)
   state       String?  @db.VarChar(100)
   pincode     String?  @db.VarChar(10)
+
   batch       String?  @db.VarChar(50)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   licenses    StudentLicense[]
   medicals    StudentMedical[]
   documents   StudentDocument[]
   account     StudentAccount?
-  invoices    Invoice[]
 
   @@map("students")
 }
@@ -336,9 +316,6 @@ model StudentAccount {
   @@map("student_accounts")
 }
 
-// ──────────────────────────────────────────────────────────────
-// Weather Module
-// ──────────────────────────────────────────────────────────────
 model WeatherCheck {
   id             Int      @id @default(autoincrement())
   timestamp      DateTime @default(now())
@@ -366,13 +343,14 @@ model WeatherCheck {
 // ──────────────────────────────────────────────────────────────
 // DMS Models
 // ──────────────────────────────────────────────────────────────
+
 model Document {
   id             Int               @id @default(autoincrement())
   title          String            @db.VarChar(255)
   categoryId     Int
   category       DocumentCategory  @relation(fields: [categoryId], references: [id])
   status         DocumentStatus    @default(ACTIVE)
-
+  
   // Relations to track who/what the document belongs to
   studentId      Int?
   instructorId   Int?
@@ -426,80 +404,8 @@ enum DocumentStatus {
 }
 
 // ──────────────────────────────────────────────────────────────
-// T3 Module — Invoices
+// Courses & Pricing
 // ──────────────────────────────────────────────────────────────
-model Invoice {
-  id            Int           @id @default(autoincrement())
-  invoiceNumber String        @unique @db.VarChar(50)
-  studentId     Int
-  student       Student       @relation(fields: [studentId], references: [id])
-  issuedById    Int
-  issuedBy      User          @relation("IssuedByUser", fields: [issuedById], references: [id])
-  status        InvoiceStatus @default(PENDING)
-  dueDate       DateTime?
-  issuedDate    DateTime      @default(now())
-  notes         String?       @db.Text
-  amount        Decimal       @db.Decimal(10, 2) @default(0)
-  paidAmount    Decimal       @db.Decimal(10, 2) @default(0)
-  items         InvoiceItem[]
-  payments      Payment[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  @@map("invoices")
-}
-
-model InvoiceItem {
-  id          Int     @id @default(autoincrement())
-  invoiceId   Int
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  description String  @db.VarChar(255)
-  quantity    Int     @default(1)
-  unitPrice   Decimal @db.Decimal(10, 2)
-  totalPrice  Decimal @db.Decimal(10, 2)
-
-  @@map("invoice_items")
-}
-
-model Payment {
-  id        Int      @id @default(autoincrement())
-  invoiceId Int
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  amount    Decimal  @db.Decimal(10, 2)
-  paidAt    DateTime @default(now())
-  method    String?  @db.VarChar(50)
-  notes     String?  @db.Text
-  createdAt DateTime @default(now())
-
-  @@map("payments")
-}
-
-enum InvoiceStatus {
-  PENDING
-  PAID
-  OVERDUE
-}
-
-// ──────────────────────────────────────────────────────────────
-// T9 Module — Courses (models inferred from routes/courses.js)
-// ──────────────────────────────────────────────────────────────
-model Course {
-  id            Int           @id @default(autoincrement())
-  code          String        @unique @db.VarChar(50)
-  name          String        @db.VarChar(200)
-  description   String?       @db.Text
-  level         CourseLevel   @default(OTHER)
-  durationHours Float         @default(0)
-  price         Decimal       @db.Decimal(10, 2) @default(0)
-  isActive      Boolean       @default(true)
-  createdBy     Int?
-  creator       User?         @relation(fields: [createdBy], references: [id])
-  pricingRates  PricingRate[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  @@map("courses")
-}
 
 enum CourseLevel {
   PPL
@@ -511,26 +417,22 @@ enum CourseLevel {
   OTHER
 }
 
-// ──────────────────────────────────────────────────────────────
-// T14 Module — Pricing Rates (models inferred from routes/pricingRates.js)
-// ──────────────────────────────────────────────────────────────
-model PricingRate {
-  id            Int              @id @default(autoincrement())
-  name          String           @db.VarChar(200)
-  category      PricingCategory
-  rateType      RateType         @default(FLAT)
-  amount        Decimal          @db.Decimal(10, 2) @default(0)
-  currency      String           @default("INR") @db.VarChar(10)
-  courseId       Int?
-  course        Course?          @relation(fields: [courseId], references: [id])
-  effectiveFrom DateTime         @default(now())
-  isActive      Boolean          @default(true)
-  notes         String?          @db.Text
+model Course {
+  id            Int           @id @default(autoincrement())
+  code          String        @unique @db.VarChar(50)
+  name          String        @db.VarChar(200)
+  description   String?       @db.Text
+  level         CourseLevel
+  durationHours Float
+  price         Decimal       @db.Decimal(10, 2)
+  isActive      Boolean       @default(true)
   createdBy     Int?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  creator       User?         @relation("CourseCreator", fields: [createdBy], references: [id])
+  pricingRates  PricingRate[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  @@map("pricing_rates")
+  @@map("courses")
 }
 
 enum PricingCategory {
@@ -547,3 +449,62 @@ enum RateType {
   FLAT
   PER_SESSION
 }
+
+model PricingRate {
+  id            Int             @id @default(autoincrement())
+  name          String          @db.VarChar(200)
+  category      PricingCategory
+  rateType      RateType
+  amount        Decimal         @db.Decimal(10, 2)
+  currency      String          @default("INR") @db.VarChar(10)
+  courseId      Int?
+  course        Course?         @relation(fields: [courseId], references: [id])
+  effectiveFrom DateTime        @default(now())
+  isActive      Boolean         @default(true)
+  notes         String?         @db.Text
+  createdBy     Int?
+  creator       User?           @relation("PricingCreator", fields: [createdBy], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([courseId])
+  @@map("pricing_rates")
+}
+
+// ──────────────────────────────────────────────────────────────
+// Qualification Types & Records
+// ──────────────────────────────────────────────────────────────
+
+model QualificationType {
+  id          Int                   @id @default(autoincrement())
+  code        String                @unique @db.VarChar(50)
+  name        String                @db.VarChar(200)
+  description String?               @db.Text
+  isActive    Boolean               @default(true)
+  records     QualificationRecord[]
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@map("qualification_types")
+}
+
+model QualificationRecord {
+  id                  Int               @id @default(autoincrement())
+  qualificationTypeId Int
+  qualificationType   QualificationType @relation(fields: [qualificationTypeId], references: [id])
+  studentId           Int?
+  instructorId        Int?
+  issueDate           DateTime          @db.Date
+  expiryDate          DateTime?         @db.Date
+  certificateNumber   String?           @db.VarChar(100)
+  issuingAuthority    String?           @db.VarChar(200)
+  notes               String?           @db.Text
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([qualificationTypeId])
+  @@index([studentId])
+  @@index([instructorId])
+  @@map("qualification_records")
+}
+
