@@ -84,6 +84,15 @@ app.get('/', (req, res) => {
 });
 
 // ──────────────────────────────────────────
+// Mount team module routers below
+// ──────────────────────────────────────────
+import studentsRouter from './routes/students.js';
+import slotsRouter from './routes/slots.js';
+import slotRequestsRouter from './routes/slotRequests.js';
+
+app.use('/api/students', studentsRouter);
+app.use('/api/slots', slotsRouter);
+app.use('/api/slot-requests', slotRequestsRouter);
 // Team Module Routers
 // ──────────────────────────────────────────
 import studentsRouter from './routes/students.js';
