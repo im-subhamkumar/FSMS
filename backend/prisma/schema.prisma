@@ -22,8 +22,13 @@ model User {
   lastName  String   @db.VarChar(100)
   role      Role     @default(STUDENT)
   isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations for Flying Slots
+  sessionsAsStudent     FlyingSlot[]  @relation("StudentSessions")
+  sessionsAsInstructor  FlyingSlot[]  @relation("InstructorSessions")
+  requestsAsStudent     SlotRequest[] @relation("StudentRequests")
 
   @@map("users")
 }
@@ -34,4 +39,59 @@ enum Role {
   INSTRUCTOR
   STUDENT
   STAFF
+}
+
+// ──────────────────────────────────────────────────────────────
+// Flying Slots / Sessions Models
+// ──────────────────────────────────────────────────────────────
+
+model FlyingSlot {
+  id           Int        @id @default(autoincrement())
+  date         DateTime   @db.Date
+  startTime    String     @db.VarChar(5) // e.g. '08:00'
+  endTime      String     @db.VarChar(5) // e.g. '10:00'
+  status       SlotStatus @default(SCHEDULED)
+  aircraft     String     @db.VarChar(50)
+  notes        String?    @db.Text
+
+  studentId    Int
+  instructorId Int
+
+  student      User       @relation("StudentSessions", fields: [studentId], references: [id])
+  instructor   User       @relation("InstructorSessions", fields: [instructorId], references: [id])
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("flying_slots")
+}
+
+model SlotRequest {
+  id                   Int           @id @default(autoincrement())
+  date                 DateTime      @db.Date
+  timePreference       String        @db.VarChar(100)
+  instructorPreference String        @db.VarChar(100)
+  aircraftPreference   String        @db.VarChar(50)
+  notes                String?       @db.Text
+  status               RequestStatus @default(PENDING)
+
+  studentId            Int
+  student              User          @relation("StudentRequests", fields: [studentId], references: [id])
+
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@map("slot_requests")
+}
+
+enum SlotStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
