@@ -9,20 +9,6 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique @db.VarChar(255)
-  password  String   @db.VarChar(255)
-  firstName String   @db.VarChar(100)
-  lastName  String   @db.VarChar(100)
-  role      Role     @default(STUDENT)
-  isActive  Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  // Relations for Flying Slots
-  sessionsAsStudent     FlyingSlot[]  @relation("StudentSessions")
-  sessionsAsInstructor  FlyingSlot[]  @relation("InstructorSessions")
-  requestsAsStudent     SlotRequest[] @relation("StudentRequests")
   id         Int         @id @default(autoincrement())
   email      String      @unique @db.VarChar(255)
   password   String      @db.VarChar(255)
@@ -34,14 +20,10 @@ model User {
   updatedAt  DateTime    @updatedAt
   instructor Instructor?
 
-  studentDocuments    Document[] @relation("StudentDocs")
-  instructorDocuments Document[] @relation("InstructorDocs")
   assignedAircraft Aircraft[] @relation("AssignedAme")
   createdAircraft  Aircraft[] @relation("AircraftCreator")
   reportedSquawks  Squawk[]   @relation("SquawkReporter")
   activities       MaintenanceActivity[] @relation("ActivityUser")
-  createdCourses   Course[]   @relation("CourseCreator")
-  createdPricing   PricingRate[] @relation("PricingCreator")
 
   @@map("users")
 }
@@ -159,61 +141,6 @@ enum Role {
   STAFF
 }
 
-// ──────────────────────────────────────────────────────────────
-// Flying Slots / Sessions Models
-// ──────────────────────────────────────────────────────────────
-
-model FlyingSlot {
-  id           Int        @id @default(autoincrement())
-  date         DateTime   @db.Date
-  startTime    String     @db.VarChar(5) // e.g. '08:00'
-  endTime      String     @db.VarChar(5) // e.g. '10:00'
-  status       SlotStatus @default(SCHEDULED)
-  aircraft     String     @db.VarChar(50)
-  notes        String?    @db.Text
-
-  studentId    Int
-  instructorId Int
-
-  student      User       @relation("StudentSessions", fields: [studentId], references: [id])
-  instructor   User       @relation("InstructorSessions", fields: [instructorId], references: [id])
-
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@map("flying_slots")
-}
-
-model SlotRequest {
-  id                   Int           @id @default(autoincrement())
-  date                 DateTime      @db.Date
-  timePreference       String        @db.VarChar(100)
-  instructorPreference String        @db.VarChar(100)
-  aircraftPreference   String        @db.VarChar(50)
-  notes                String?       @db.Text
-  status               RequestStatus @default(PENDING)
-
-  studentId            Int
-  student              User          @relation("StudentRequests", fields: [studentId], references: [id])
-
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
-
-  @@map("slot_requests")
-}
-
-enum SlotStatus {
-  SCHEDULED
-  COMPLETED
-  CANCELLED
-}
-
-enum RequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 enum InstructorDesignation {
   CHIEF_FLIGHT_INSTRUCTOR
   SENIOR_FLIGHT_INSTRUCTOR
@@ -262,13 +189,29 @@ enum AircraftStatus {
 // ── Aircraft model — owned by Aircraft team, extended by Maintenance ──
 model Aircraft {
   id              String         @id @db.VarChar(50)
-  name            String         @db.VarChar(100)
+  tailNumber      String         @unique @db.VarChar(50)
+  name            String?        @db.VarChar(100)
+  manufacturer    String?        @db.VarChar(100)
   model           String         @db.VarChar(100)
-  status          String         @default("Active") @db.VarChar(50)
-  capacity        Int?           @default(0)
+  serialNumber    String?        @db.VarChar(100)
+  yearOfManufacture Int?
+
+  cruisingRange   Int?
+  mtow            Int?
+  emptyWeight     Int?
   fuelCapacity    Int?           @default(0)
-  type            String         @default("Passenger") @db.VarChar(50)
+  capacity        Int?           @default(0)
+
   lastMaintenance DateTime?      @db.Date
+  maintenanceSchedule String?    @db.VarChar(50)
+  totalFlightHours Float?        @default(0)
+  maintenanceStatus String?      @db.VarChar(50)
+  insuranceExpiryDate DateTime?  @db.Date
+
+  status          String         @default("Active") @db.VarChar(50)
+  availability    String         @default("Available") @db.VarChar(50)
+
+  type            String         @default("Passenger") @db.VarChar(50)
   notes           String?        @db.Text
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -279,7 +222,6 @@ model Aircraft {
   assignedAme     User?          @relation("AssignedAme", fields: [assignedAmeId], references: [id])
   createdBy       Int?
   creator         User?          @relation("AircraftCreator", fields: [createdBy], references: [id])
-  documents       Document[]
 
   @@map("aircrafts")
 }
@@ -324,9 +266,6 @@ model Student {
   city        String?  @db.VarChar(100)
   state       String?  @db.VarChar(100)
   pincode     String?  @db.VarChar(10)
-
-  batch       String?  @db.VarChar(50)
-
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   licenses    StudentLicense[]
@@ -407,172 +346,3 @@ model WeatherCheck {
   @@index([timestamp])
   @@map("weather_checks")
 }
-
-// ──────────────────────────────────────────────────────────────
-// DMS Models
-// ──────────────────────────────────────────────────────────────
-
-model Document {
-  id             Int               @id @default(autoincrement())
-  title          String            @db.VarChar(255)
-  categoryId     Int
-  category       DocumentCategory  @relation(fields: [categoryId], references: [id])
-  status         DocumentStatus    @default(ACTIVE)
-  
-  // Relations to track who/what the document belongs to
-  studentId      Int?
-  instructorId   Int?
-  aircraftId     String?           @db.VarChar(50)
-
-  student        User?             @relation("StudentDocs", fields: [studentId], references: [id])
-  instructor     User?             @relation("InstructorDocs", fields: [instructorId], references: [id])
-  aircraft       Aircraft?         @relation(fields: [aircraftId], references: [id])
-
-  expiryDate     DateTime?
-  versions       DocumentVersion[]
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-
-  @@map("documents")
-}
-
-model DocumentVersion {
-  id           Int      @id @default(autoincrement())
-  documentId   Int
-  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  version      Int      @default(1)
-  fileUrl      String   @db.Text
-  originalName String   @db.VarChar(255)
-  mimeType     String   @db.VarChar(100)
-  size         Int
-  description  String?  @db.Text
-  uploadedById Int?
-  uploadedAt   DateTime @default(now())
-
-  @@map("document_versions")
-}
-
-model DocumentCategory {
-  id                   Int        @id @default(autoincrement())
-  name                 String     @unique @db.VarChar(100)
-  description          String?    @db.Text
-  requiresExpiry       Boolean    @default(false)
-  warningThresholdDays Int        @default(30)
-  documents            Document[]
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
-
-  @@map("document_categories")
-}
-
-enum DocumentStatus {
-  ACTIVE
-  EXPIRED
-  ARCHIVED
-}
-
-// ──────────────────────────────────────────────────────────────
-// Courses & Pricing
-// ──────────────────────────────────────────────────────────────
-
-enum CourseLevel {
-  PPL
-  CPL
-  ATPL
-  IFR
-  MULTI_ENGINE
-  GROUND_SCHOOL
-  OTHER
-}
-
-model Course {
-  id            Int           @id @default(autoincrement())
-  code          String        @unique @db.VarChar(50)
-  name          String        @db.VarChar(200)
-  description   String?       @db.Text
-  level         CourseLevel
-  durationHours Float
-  price         Decimal       @db.Decimal(10, 2)
-  isActive      Boolean       @default(true)
-  createdBy     Int?
-  creator       User?         @relation("CourseCreator", fields: [createdBy], references: [id])
-  pricingRates  PricingRate[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  @@map("courses")
-}
-
-enum PricingCategory {
-  AIRCRAFT_RENTAL
-  INSTRUCTOR_FEE
-  COURSE_FEE
-  EXAM_FEE
-  GROUND_SCHOOL
-  OTHER
-}
-
-enum RateType {
-  HOURLY
-  FLAT
-  PER_SESSION
-}
-
-model PricingRate {
-  id            Int             @id @default(autoincrement())
-  name          String          @db.VarChar(200)
-  category      PricingCategory
-  rateType      RateType
-  amount        Decimal         @db.Decimal(10, 2)
-  currency      String          @default("INR") @db.VarChar(10)
-  courseId      Int?
-  course        Course?         @relation(fields: [courseId], references: [id])
-  effectiveFrom DateTime        @default(now())
-  isActive      Boolean         @default(true)
-  notes         String?         @db.Text
-  createdBy     Int?
-  creator       User?           @relation("PricingCreator", fields: [createdBy], references: [id])
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-
-  @@index([courseId])
-  @@map("pricing_rates")
-}
-
-// ──────────────────────────────────────────────────────────────
-// Qualification Types & Records
-// ──────────────────────────────────────────────────────────────
-
-model QualificationType {
-  id          Int                   @id @default(autoincrement())
-  code        String                @unique @db.VarChar(50)
-  name        String                @db.VarChar(200)
-  description String?               @db.Text
-  isActive    Boolean               @default(true)
-  records     QualificationRecord[]
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
-
-  @@map("qualification_types")
-}
-
-model QualificationRecord {
-  id                  Int               @id @default(autoincrement())
-  qualificationTypeId Int
-  qualificationType   QualificationType @relation(fields: [qualificationTypeId], references: [id])
-  studentId           Int?
-  instructorId        Int?
-  issueDate           DateTime          @db.Date
-  expiryDate          DateTime?         @db.Date
-  certificateNumber   String?           @db.VarChar(100)
-  issuingAuthority    String?           @db.VarChar(200)
-  notes               String?           @db.Text
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-
-  @@index([qualificationTypeId])
-  @@index([studentId])
-  @@index([instructorId])
-  @@map("qualification_records")
-}
-
