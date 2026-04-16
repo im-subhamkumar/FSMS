@@ -1,14 +1,68 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import Header from '../components/Header';
+import StatCards from '../components/StatCards';
+import FleetStatus from '../components/FleetStatus';
+import RepairAssignment from '../components/RepairAssignment';
+import AlertsList from '../components/AlertsList';
+import AssignedRepairOverview from '../components/AssignedRepairOverview';
+import ActivityLog from '../components/ActivityLog';
+import Modal from '../components/Modal';
+import MaintenanceCalendar from '../components/MaintenanceCalendar';
+import ExpandedTableView from '../components/ExpandedTableView';
+import './maintenance-dashboard.css';
 
 export default function MaintenanceBlocksRoot() {
+    const [modalState, setModalState] = useState({ isOpen: false, type: null, title: '' });
+
+    useEffect(() => {
+        const handleOpenModal = (event) => {
+            setModalState({
+                isOpen: true,
+                type: event.detail.type,
+                title: event.detail.title
+            });
+        };
+        window.addEventListener('open-modal', handleOpenModal);
+        return () => window.removeEventListener('open-modal', handleOpenModal);
+    }, []);
+
+    const closeModal = () => setModalState({ ...modalState, isOpen: false });
+
+    const renderModalContent = () => {
+        switch (modalState.type) {
+            case 'calendar': return <MaintenanceCalendar />;
+            case 'fleet': return <ExpandedTableView type="fleet" />;
+            case 'repairs': return <ExpandedTableView type="repairs" />;
+            default: return null;
+        }
+    };
+
     return (
-        <div className="flex flex-col h-full">
-            <h1 className="text-2xl font-bold mb-4">M ai nt en an ce Bl oc ks</h1>
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 flex items-center justify-center">
-                <p className="text-gray-500 dark:text-gray-400 text-lg">
-                    This is the M ai nt en an ce Bl oc ks module placeholder.
-                </p>
+        <div className="maintenance-dashboard-root h-full overflow-y-auto">
+            <div className="dashboard-container">
+                <Header />
+                <StatCards />
+
+                <div className="grid-layout">
+                    {/* Left Column */}
+                    <div className="grid-col">
+                        <FleetStatus />
+                        <AlertsList />
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="grid-col">
+                        <RepairAssignment />
+                        <AssignedRepairOverview />
+                    </div>
+                </div>
+
+                <ActivityLog />
             </div>
+            
+            <Modal isOpen={modalState.isOpen} onClose={closeModal} title={modalState.title}>
+                {renderModalContent()}
+            </Modal>
         </div>
     );
 }
