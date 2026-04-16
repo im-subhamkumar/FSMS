@@ -1,0 +1,39 @@
+﻿fsms_backend  | 
+fsms_backend  | > fsms-backend@1.0.0 dev
+fsms_backend  | > nodemon server.js
+fsms_backend  | 
+fsms_backend  | [33m[nodemon] 3.1.14[39m
+fsms_backend  | [33m[nodemon] to restart at any time, enter `rs`[39m
+fsms_backend  | [33m[nodemon] watching path(s): *.*[39m
+fsms_backend  | [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+fsms_backend  | [32m[nodemon] starting `node server.js`[39m
+fsms_backend  | Γ£à FSMS API running on http://0.0.0.0:3000
+fsms_backend  | /app/node_modules/@prisma/client/runtime/library.js:64
+fsms_backend  | ${et(e)}`}var zd=L("prisma:client:engines:resolveEnginePath"),Yd=()=>new RegExp("runtime[\\\\/]library\\.m?js$");async function za(e,t){let r={binary:process.env.PRISMA_QUERY_ENGINE_BINARY,library:process.env.PRISMA_QUERY_ENGINE_LIBRARY}[e]??t.prismaPath;if(r!==void 0)return r;let{enginePath:n,searchedLocations:i}=await Zd(e,t);if(zd("enginePath",n),n!==void 0&&e==="binary"&&li(n),n!==void 0)return t.prismaPath=n;let o=await nt(),s=t.generator?.binaryTargets??[],a=s.some(d=>d.native),l=!s.some(d=>d.value===o),u=__filename.match(Yd())===null,c={searchedLocations:i,generatorBinaryTargets:s,generator:t.generator,runtimeBinaryTarget:o,queryEngineName:Ya(e,o),expectedLocation:Er.default.relative(process.cwd(),t.dirname),errorStack:new Error().stack},p;throw a&&l?p=Wa(c):l?p=Qa(c):u?p=Ja(c):p=Ha(c),new R(p,t.clientVersion)}async function Zd(engineType,config){let binaryTarget=await nt(),searchedLocations=[],dirname=eval("__dirname"),searchLocations=[config.dirname,Er.default.resolve(dirname,".."),config.generator?.output?.value??dirname,Er.default.resolve(dirname,"../../../.prisma/client"),"/tmp/prisma-engines",config.cwd];__filename.includes("resolveEnginePath")&&searchLocations.push(Yo());for(let e of searchLocations){let t=Ya(engineType,binaryTarget),r=Er.default.join(e,t);if(searchedLocations.push(e),Ka.default.existsSync(r))return{enginePath:r,searchedLocations}}return{enginePath:void 0,searchedLocations}}function Ya(e,t){return e==="library"?qr(t,"fs"):`query-engine-${t}${t==="windows"?".exe":""}`}var Hi=k(bi());function Za(e){return e?e.replace(/".*"/g,'"X"').replace(/[\s:\[]([+-]?([0-9]*[.])?[0-9]+)/g,t=>`${t[0]}5`):""}function Xa(e){return e.split(`
+fsms_backend  |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     ^
+fsms_backend  | 
+fsms_backend  | PrismaClientInitializationError: Prisma Client could not locate the Query Engine for runtime "debian-openssl-3.0.x".
+fsms_backend  | 
+fsms_backend  | This happened because Prisma Client was generated for "linux-musl", but the actual deployment required "debian-openssl-3.0.x".
+fsms_backend  | Add "debian-openssl-3.0.x" to `binaryTargets` in the "schema.prisma" file and run `prisma generate` after saving it:
+fsms_backend  | 
+fsms_backend  | generator client {
+fsms_backend  |   provider      = "prisma-client-js"
+fsms_backend  |   binaryTargets = ["native", "debian-openssl-3.0.x"]
+fsms_backend  | }
+fsms_backend  | 
+fsms_backend  | The following locations have been searched:
+fsms_backend  |   /app/node_modules/.prisma/client
+fsms_backend  |   /app/node_modules/@prisma/client
+fsms_backend  |   /tmp/prisma-engines
+fsms_backend  |   /app/prisma
+fsms_backend  |     at za (/app/node_modules/@prisma/client/runtime/library.js:64:805)
+fsms_backend  |     at async Object.loadLibrary (/app/node_modules/@prisma/client/runtime/library.js:111:10084)
+fsms_backend  |     at async _r.loadEngine (/app/node_modules/@prisma/client/runtime/library.js:112:448)
+fsms_backend  |     at async _r.instantiateLibrary (/app/node_modules/@prisma/client/runtime/library.js:111:12599) {
+fsms_backend  |   clientVersion: '5.22.0',
+fsms_backend  |   errorCode: undefined
+fsms_backend  | }
+fsms_backend  | 
+fsms_backend  | Node.js v18.20.8
+fsms_backend  | [31m[nodemon] app crashed - waiting for file changes before starting...[39m

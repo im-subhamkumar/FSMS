@@ -1,0 +1,104 @@
+# ============================================================
+# FSMS — docker-compose.yml
+# Runs: MySQL 8.0 → Node/Express backend → React/Vite frontend
+# Usage: docker-compose up --build
+# ============================================================
+
+version: '3.9'
+
+services:
+
+  # ──────────────────────────────────────────
+  # 1. MySQL Database
+  # ──────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: fsms_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: fsms_db
+      MYSQL_USER: fsms_user
+      MYSQL_PASSWORD: fsms_password
+    ports:
+      - "3307:3306"       # Accessible from host at localhost:3307 (changed to avoid local conflict)
+    volumes:
+      - db_data:/var/lib/mysql   # Persist data between restarts
+    networks:
+      - fsms_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "fsms_user", "--password=fsms_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ──────────────────────────────────────────
+  # 2. Node.js / Express Backend
+  # ──────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fsms_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy   # Wait until MySQL is truly ready
+    environment:
+      DATABASE_URL: "mysql://fsms_user:fsms_password@db:3306/fsms_db"
+      PORT: 3000
+      NODE_ENV: development
+    ports:
+      - "3000:3000"       # Accessible from host at localhost:3000
+    volumes:
+      # Mount source code for live reload via nodemon
+      - ./backend:/app
+      # Prevent host node_modules from overwriting container's node_modules
+      - /app/node_modules
+    networks:
+      - fsms_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # ──────────────────────────────────────────
+  # 3. React / Vite Frontend
+  # ──────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend      # Frontend subfolder containing the Dockerfile
+      dockerfile: Dockerfile
+    container_name: fsms_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy   # Wait until API is ready
+    environment:
+      VITE_API_URL: "http://localhost:3000/api"
+      NODE_ENV: development
+    ports:
+      - "5173:5173"       # Accessible from host at localhost:5173
+    volumes:
+      # Mount frontend source code for Vite HMR live reload
+      - ./frontend:/app
+      # Prevent host node_modules from overwriting container's node_modules
+      - /app/node_modules
+    networks:
+      - fsms_network
+
+# ──────────────────────────────────────────
+# Named volume for MySQL data persistence
+# ──────────────────────────────────────────
+volumes:
+  db_data:
+
+# ──────────────────────────────────────────
+# Shared internal Docker network
+# ──────────────────────────────────────────
+networks:
+  fsms_network:
+    driver: bridge
