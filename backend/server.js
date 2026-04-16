@@ -88,12 +88,28 @@ import maintenanceRouter from './routes/maintenance.js';
 import instructorsRouter from './routes/instructors.js';
 import weatherRouter from './routes/weather.js';
 import aircraftRouter from './routes/aircraft.js';
+import documentsRouter from './routes/documents.js';
+import documentCategoriesRouter from './routes/documentCategories.js';
+import coursesRouter from './routes/courses.js';
+import pricingRatesRouter from './routes/pricingRates.js';
+import qualificationTypesRouter from './routes/qualificationTypes.js';
+import qualificationRecordsRouter from './routes/qualificationRecords.js';
+import slotsRouter from './routes/slots.js';
+import slotRequestsRouter from './routes/slotRequests.js';
 
 app.use('/api/students', studentsRouter);
 app.use('/api/maintenance', maintenanceRouter);
 app.use('/api/instructors', instructorsRouter);
 app.use('/api/weather', weatherRouter);
 app.use('/api/aircraft', aircraftRouter);
+app.use('/api/documents', documentsRouter);
+app.use('/api/document-categories', documentCategoriesRouter);
+app.use('/api/courses', coursesRouter);
+app.use('/api/pricing-rates', pricingRatesRouter);
+app.use('/api/qualification-types', qualificationTypesRouter);
+app.use('/api/qualification-records', qualificationRecordsRouter);
+app.use('/api/slots', slotsRouter);
+app.use('/api/slot-requests', slotRequestsRouter);
 
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {
