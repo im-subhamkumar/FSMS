@@ -199,13 +199,25 @@ enum AircraftStatus {
 // ── Aircraft model — owned by Aircraft team, extended by Maintenance ──
 model Aircraft {
   id              String         @id @db.VarChar(50)
+  tailNumber      String         @db.VarChar(50)
   name            String         @db.VarChar(100)
+  manufacturer    String?        @db.VarChar(100)
   model           String         @db.VarChar(100)
-  status          String         @default("Active") @db.VarChar(50)
-  capacity        Int?           @default(0)
+  serialNumber    String?        @db.VarChar(100)
+  yearOfManufacture Int?
+  cruisingRange   Int?           @default(0)
+  mtow            Int?           @default(0)
+  emptyWeight     Int?           @default(0)
   fuelCapacity    Int?           @default(0)
-  type            String         @default("Passenger") @db.VarChar(50)
+  capacity        Int?           @default(0)
   lastMaintenance DateTime?      @db.Date
+  maintenanceSchedule String?      @db.VarChar(100)
+  totalFlightHours Float?         @default(0)
+  maintenanceStatus String?        @db.VarChar(50)
+  insuranceExpiryDate DateTime?    @db.Date
+  status          String         @default("Active") @db.VarChar(50)
+  availability    String         @default("Available") @db.VarChar(50)
+  type            String         @default("Passenger") @db.VarChar(50)
   notes           String?        @db.Text
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
