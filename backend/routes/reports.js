@@ -171,8 +171,8 @@ router.get('/overdue-invoices', async (req, res) => {
 });
 
 // ─── GET /api/reports/fleet-utilization ──────────────────────
-// T10 required: Flight hours per aircraft
-// Uses real Aircraft data from T9 module (now merged).
+// Uses real Aircraft data (totalFlightHours, availability, etc.)
+// and counts FlyingSlot sessions per aircraft for real flight counts.
 // Falls back to mock data if no aircraft records exist.
 router.get('/fleet-utilization', async (req, res) => {
   try {
@@ -181,16 +181,27 @@ router.get('/fleet-utilization', async (req, res) => {
     });
 
     if (aircraftRecords.length > 0) {
-      // Map real aircraft data to the chart-friendly shape
+      // Count completed flying slots per aircraft tail/id
+      const slotCounts = await prisma.flyingSlot.groupBy({
+        by: ['aircraft'],
+        _count: { id: true },
+        where: { status: 'COMPLETED' },
+      }).catch(() => []); // graceful fallback if table doesn't exist yet
+
+      const slotMap = {};
+      for (const s of slotCounts) {
+        slotMap[s.aircraft] = s._count.id;
+      }
+
       const fleetData = aircraftRecords.map(ac => ({
-        aircraft: `${ac.name} (${ac.id})`,
-        model:    ac.model,
-        status:   ac.status,
-        type:     ac.type,
-        capacity: ac.capacity || 0,
-        // Flight hours/flights not yet tracked in Aircraft model — placeholder
-        hours:    0,
-        flights:  0,
+        aircraft:     `${ac.name} (${ac.id})`,
+        model:        ac.model,
+        status:       ac.status,
+        availability: ac.availability || 'Available',
+        type:         ac.type,
+        capacity:     ac.capacity || 0,
+        hours:        ac.totalFlightHours || 0,
+        flights:      slotMap[ac.id] || slotMap[ac.name] || 0,
       }));
       return res.json(fleetData);
     }
