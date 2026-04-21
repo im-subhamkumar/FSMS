@@ -7,8 +7,13 @@ import AircraftDetailsPage from "../components/AircraftDetailsPage";
 const Aircraft = () => {
   return (
     <Routes>
-      <Route index element={<AircraftManager />} />
+      {/* Main Page */}
+      <Route path="/" element={<AircraftManager />} />
+
+      {/* Add Aircraft Page */}
       <Route path="add" element={<AddAircraft />} />
+
+      {/* Aircraft Details Page */}
       <Route path=":id" element={<AircraftDetailsPage />} />
     </Routes>
   );
