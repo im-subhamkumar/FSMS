@@ -110,6 +110,12 @@ app.use('/api/pricing-rates', pricingRatesRouter);
 app.use('/api/qualification-types', qualificationTypesRouter);
 app.use('/api/qualification-records', qualificationRecordsRouter);
 
+// T3 — Invoices & Reports Dashboard
+import invoicesRouter from './routes/invoices.js';
+import reportsRouter from './routes/reports.js';
+app.use('/api/invoices', invoicesRouter);
+app.use('/api/reports', reportsRouter);
+
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
