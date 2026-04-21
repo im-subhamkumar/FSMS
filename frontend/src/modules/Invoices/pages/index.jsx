@@ -1,14 +1,20 @@
+// T3 — Invoices module entry point
+// Sub-routes: list (with modal) and detail view
+// Note: /new route removed — create is now a modal on the list page (T10 spec)
+
 import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import InvoiceList   from '../components/InvoiceList';
+import InvoiceDetail from '../components/InvoiceDetail';
+import InvoiceForm   from '../components/InvoiceForm';
 
 export default function InvoicesRoot() {
-    return (
-        <div className="flex flex-col h-full">
-            <h1 className="text-2xl font-bold mb-4">I nv oi ce s</h1>
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 flex items-center justify-center">
-                <p className="text-gray-500 dark:text-gray-400 text-lg">
-                    This is the I nv oi ce s module placeholder.
-                </p>
-            </div>
-        </div>
-    );
+  return (
+    <Routes>
+      <Route index element={<InvoiceList />} />
+      <Route path="new" element={<InvoiceForm />} />
+      <Route path=":id" element={<InvoiceDetail />} />
+      <Route path=":id/edit" element={<InvoiceForm />} />
+    </Routes>
+  );
 }

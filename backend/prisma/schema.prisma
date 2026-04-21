@@ -34,6 +34,9 @@ model User {
   sessionsAsInstructor  FlyingSlot[]  @relation("InstructorSessions")
   requestsAsStudent     SlotRequest[] @relation("StudentRequests")
 
+  // T3 — Invoice relations
+  invoicesIssued   Invoice[]     @relation("IssuedByUser")
+
   @@map("users")
 }
 
@@ -282,6 +285,7 @@ model Student {
   medicals    StudentMedical[]
   documents   StudentDocument[]
   account     StudentAccount?
+  invoices    Invoice[]
 
   @@map("students")
 }
@@ -526,6 +530,61 @@ model QualificationRecord {
 }
 
 // ──────────────────────────────────────────────────────────────
+// T3 Module — Invoices
+// ──────────────────────────────────────────────────────────────
+model Invoice {
+  id            Int           @id @default(autoincrement())
+  invoiceNumber String        @unique @db.VarChar(50)
+  studentId     Int
+  student       Student       @relation(fields: [studentId], references: [id])
+  issuedById    Int
+  issuedBy      User          @relation("IssuedByUser", fields: [issuedById], references: [id])
+  status        InvoiceStatus @default(PENDING)
+  dueDate       DateTime?
+  issuedDate    DateTime      @default(now())
+  notes         String?       @db.Text
+  amount        Decimal       @db.Decimal(10, 2) @default(0)
+  paidAmount    Decimal       @db.Decimal(10, 2) @default(0)
+  items         InvoiceItem[]
+  payments      Payment[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          Int     @id @default(autoincrement())
+  invoiceId   Int
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String  @db.VarChar(255)
+  quantity    Int     @default(1)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  totalPrice  Decimal @db.Decimal(10, 2)
+
+  @@map("invoice_items")
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount    Decimal  @db.Decimal(10, 2)
+  paidAt    DateTime @default(now())
+  method    String?  @db.VarChar(50)
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("payments")
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+// ──────────────────────────────────────────────────────────────
 // Flying Slots / Sessions Models
 // ──────────────────────────────────────────────────────────────
 
@@ -579,5 +638,3 @@ enum RequestStatus {
   APPROVED
   REJECTED
 }
-
-
