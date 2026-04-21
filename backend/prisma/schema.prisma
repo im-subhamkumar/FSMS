@@ -28,6 +28,11 @@ model User {
   activities       MaintenanceActivity[] @relation("ActivityUser")
   createdCourses   Course[]   @relation("CourseCreator")
   createdPricing   PricingRate[] @relation("PricingCreator")
+  
+  // Relations for Flying Slots module
+  sessionsAsStudent     FlyingSlot[]  @relation("StudentSessions")
+  sessionsAsInstructor  FlyingSlot[]  @relation("InstructorSessions")
+  requestsAsStudent     SlotRequest[] @relation("StudentRequests")
 
   // T3 — Invoice relations
   invoicesIssued   Invoice[]     @relation("IssuedByUser")
@@ -197,13 +202,25 @@ enum AircraftStatus {
 // ── Aircraft model — owned by Aircraft team, extended by Maintenance ──
 model Aircraft {
   id              String         @id @db.VarChar(50)
+  tailNumber      String         @db.VarChar(50)
   name            String         @db.VarChar(100)
+  manufacturer    String?        @db.VarChar(100)
   model           String         @db.VarChar(100)
-  status          String         @default("Active") @db.VarChar(50)
-  capacity        Int?           @default(0)
+  serialNumber    String?        @db.VarChar(100)
+  yearOfManufacture Int?
+  cruisingRange   Int?           @default(0)
+  mtow            Int?           @default(0)
+  emptyWeight     Int?           @default(0)
   fuelCapacity    Int?           @default(0)
-  type            String         @default("Passenger") @db.VarChar(50)
+  capacity        Int?           @default(0)
   lastMaintenance DateTime?      @db.Date
+  maintenanceSchedule String?      @db.VarChar(100)
+  totalFlightHours Float?         @default(0)
+  maintenanceStatus String?        @db.VarChar(50)
+  insuranceExpiryDate DateTime?    @db.Date
+  status          String         @default("Active") @db.VarChar(50)
+  availability    String         @default("Available") @db.VarChar(50)
+  type            String         @default("Passenger") @db.VarChar(50)
   notes           String?        @db.Text
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -565,4 +582,59 @@ enum InvoiceStatus {
   PENDING
   PAID
   OVERDUE
+}
+
+// ──────────────────────────────────────────────────────────────
+// Flying Slots / Sessions Models
+// ──────────────────────────────────────────────────────────────
+
+model FlyingSlot {
+  id           Int        @id @default(autoincrement())
+  date         DateTime   @db.Date
+  startTime    String     @db.VarChar(5) // e.g. '08:00'
+  endTime      String     @db.VarChar(5) // e.g. '10:00'
+  status       SlotStatus @default(SCHEDULED)
+  aircraft     String     @db.VarChar(50)
+  notes        String?    @db.Text
+
+  studentId    Int
+  instructorId Int
+
+  student      User       @relation("StudentSessions", fields: [studentId], references: [id])
+  instructor   User       @relation("InstructorSessions", fields: [instructorId], references: [id])
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("flying_slots")
+}
+
+model SlotRequest {
+  id                   Int           @id @default(autoincrement())
+  date                 DateTime      @db.Date
+  timePreference       String        @db.VarChar(100)
+  instructorPreference String        @db.VarChar(100)
+  aircraftPreference   String        @db.VarChar(50)
+  notes                String?       @db.Text
+  status               RequestStatus @default(PENDING)
+
+  studentId            Int
+  student              User          @relation("StudentRequests", fields: [studentId], references: [id])
+
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@map("slot_requests")
+}
+
+enum SlotStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
