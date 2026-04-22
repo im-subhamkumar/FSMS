@@ -54,6 +54,7 @@ async function main() {
         update: {},
         create: {
             id: 'VT-ACC',
+            tailNumber: 'VT-ACC',
             name: 'Cessna 172',
             model: 'C172 Skyhawk',
             status: 'Active',

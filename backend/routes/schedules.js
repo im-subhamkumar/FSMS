@@ -58,7 +58,8 @@ async function checkWeatherForSchedule(schedule) {
 
         const updateData = {
             weatherVerdict: gonogo.verdict,
-            extremeWeatherWarning: extremeWarning
+            extremeWeatherWarning: extremeWarning,
+            status: gonogo.verdict === 'GO' ? 'SCHEDULED' : 'CANCELLED'
         };
 
         if (gonogo.verdict === 'NO-GO' || extremeWarning) {
@@ -122,14 +123,15 @@ router.post('/', async (req, res) => {
                 aircraftId: aircraftId || 'VT-ACC',
                 startTime: start,
                 endTime: end,
-                status: 'SCHEDULED'
+                status: 'AWAITING'
             }
         });
         
-        console.log(`[SCHEDULE] Created slot ID ${schedule.id}. Starting weather check...`);
-        // Immediate weather check upon scheduling
-        const updated = await checkWeatherForSchedule(schedule);
-        res.json(updated);
+        console.log(`[SCHEDULE] Created slot ID ${schedule.id}. Starting background weather check...`);
+        // Start background weather check without awaiting, so UI sees 'AWAITING' status
+        checkWeatherForSchedule(schedule).catch(err => console.error(`[BACKGROUND-SAFETY] Failed for ID ${schedule.id}:`, err));
+        
+        res.json(schedule);
     } catch (err) {
         console.error('[SCHEDULE] Create failed:', err);
         res.status(500).json({ error: err.message });
