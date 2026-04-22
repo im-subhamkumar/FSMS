@@ -23,42 +23,6 @@ export default function GoNoGoCard({ studentType, setStudentType, goNoGoData }) 
         <span className="font-bold text-slate-800 dark:text-white">Go / No-Go Decision</span>
       </div>
 
-      {goNoGoData?.assigned_slots?.length > 0 && (
-        <div className="assigned-slots-section">
-          <div className="forecast-title" style={{ color: 'var(--accent-light)', marginBottom: '10px' }}>
-            📍 Admin Assigned Slots
-          </div>
-          <div className="assigned-slots-grid">
-            {goNoGoData.assigned_slots.map((slot, idx) => (
-              <div key={idx} className={`assigned-slot-card ${slot.verdict}`}>
-                <div className="assigned-slot-header">
-                  <span className="assigned-slot-time">
-                    {formatTimeSlot(slot.start)} – {formatTimeSlot(slot.end)}
-                  </span>
-                  <span className={`assigned-slot-badge ${slot.verdict}`}>
-                    {slot.verdict}
-                  </span>
-                </div>
-                <div className="assigned-slot-body">
-                  <div className="assigned-slot-prob-circle">
-                    <svg viewBox="0 0 36 36" className="circular-chart">
-                      <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                      <path className={`circle ${slot.verdict}`} strokeDasharray={`${slot.probability}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                      <text x="18" y="20.35" className="percentage">{slot.probability}%</text>
-                    </svg>
-                  </div>
-                  <div className="assigned-slot-details">
-                    <div className="assigned-slot-prob-lbl">Go Probability</div>
-                    <div className="assigned-slot-reason">
-                      {slot.reasons[0]}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="bg-slate-900/5 dark:bg-slate-900/30 p-4 rounded-xl border border-slate-200/50 dark:border-slate-700/50 mb-6 mt-2">
         <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3 text-center">Student Type</label>
@@ -111,6 +75,23 @@ export default function GoNoGoCard({ studentType, setStudentType, goNoGoData }) 
         {goNoGoData?.warnings?.map((w, i) => (
           <div key={'w' + i} className="text-sm font-medium p-3 rounded-lg flex items-start border shadow-sm bg-caution-yellow/10 text-amber-700 dark:text-amber-400 border-caution-yellow/20 dark:border-caution-yellow/40">{w}</div>
         ))}
+        {goNoGoData?.extreme_warning ? (
+          <div className="text-sm font-bold p-4 rounded-xl flex flex-col items-center gap-2 border-2 shadow-lg bg-amber-50 dark:bg-amber-900/10 text-amber-900 dark:text-amber-400 border-amber-500/50 animate-pulse mt-2">
+            <span className="text-2xl">🚨</span>
+            <div className="text-center">{goNoGoData.extreme_warning}</div>
+          </div>
+        ) : (
+          <div className="text-sm font-medium p-4 rounded-xl flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-500 mt-2">
+            <span className="text-xl">☀️</span>
+            <span>48-Hour Safety Outlook: No extreme weather (cyclones/heavy rain) predicted.</span>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6 pt-6 border-t border-slate-200/50 dark:border-slate-700/50">
+        <a href="/flying-slots" className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95">
+          📅 Manage Flight Slots
+        </a>
       </div>
 
       {goNoGoData?.forecast_slots?.length > 0 && (
