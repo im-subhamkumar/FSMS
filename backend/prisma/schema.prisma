@@ -20,6 +20,23 @@ model User {
   updatedAt  DateTime    @updatedAt
   instructor Instructor?
 
+  studentDocuments    Document[] @relation("StudentDocs")
+  instructorDocuments Document[] @relation("InstructorDocs")
+  assignedAircraft Aircraft[] @relation("AssignedAme")
+  createdAircraft  Aircraft[] @relation("AircraftCreator")
+  reportedSquawks  Squawk[]   @relation("SquawkReporter")
+  activities       MaintenanceActivity[] @relation("ActivityUser")
+  createdCourses   Course[]   @relation("CourseCreator")
+  createdPricing   PricingRate[] @relation("PricingCreator")
+  
+  // Relations for Flying Slots module
+  sessionsAsStudent     FlyingSlot[]  @relation("StudentSessions")
+  sessionsAsInstructor  FlyingSlot[]  @relation("InstructorSessions")
+  requestsAsStudent     SlotRequest[] @relation("StudentRequests")
+
+  // T3 — Invoice relations
+  invoicesIssued   Invoice[]     @relation("IssuedByUser")
+
   @@map("users")
 }
 
@@ -136,6 +153,7 @@ enum Role {
   STAFF
 }
 
+
 enum InstructorDesignation {
   CHIEF_FLIGHT_INSTRUCTOR
   SENIOR_FLIGHT_INSTRUCTOR
@@ -173,31 +191,101 @@ enum CurrencyStatus {
   EXPIRING_SOON
   NOT_CURRENT
 }
+
+// ── Aircraft status used by Maintenance module ──────────────────
+enum AircraftStatus {
+  AIRWORTHY
+  AOG
+  IN_MAINTENANCE
+}
+
+// ── Aircraft model — owned by Aircraft team, extended by Maintenance ──
+model Aircraft {
+  id              String         @id @db.VarChar(50)
+  tailNumber      String         @db.VarChar(50)
+  name            String         @db.VarChar(100)
+  manufacturer    String?        @db.VarChar(100)
+  model           String         @db.VarChar(100)
+  serialNumber    String?        @db.VarChar(100)
+  yearOfManufacture Int?
+  cruisingRange   Int?           @default(0)
+  mtow            Int?           @default(0)
+  emptyWeight     Int?           @default(0)
+  fuelCapacity    Int?           @default(0)
+  capacity        Int?           @default(0)
+  lastMaintenance DateTime?      @db.Date
+  maintenanceSchedule String?      @db.VarChar(100)
+  totalFlightHours Float?         @default(0)
+  maintenanceStatus String?        @db.VarChar(50)
+  insuranceExpiryDate DateTime?    @db.Date
+  status          String         @default("Active") @db.VarChar(50)
+  availability    String         @default("Available") @db.VarChar(50)
+  type            String         @default("Passenger") @db.VarChar(50)
+  notes           String?        @db.Text
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Maintenance module relations
+  squawks         Squawk[]
+  assignedAmeId   Int?
+  assignedAme     User?          @relation("AssignedAme", fields: [assignedAmeId], references: [id])
+  createdBy       Int?
+  creator         User?          @relation("AircraftCreator", fields: [createdBy], references: [id])
+  documents       Document[]
+
+  @@map("aircrafts")
+}
+
+model Squawk {
+  id           Int      @id @default(autoincrement())
+  aircraftId   String
+  aircraft     Aircraft @relation(fields: [aircraftId], references: [id])
+  issue        String   @db.VarChar(255)
+  severity     String   @default("Normal") @db.VarChar(50)
+  status       String   @default("Open") @db.VarChar(50)
+  reportedById Int?
+  reporter     User?    @relation("SquawkReporter", fields: [reportedById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("squawks")
+}
+
+model MaintenanceActivity {
+  id          Int      @id @default(autoincrement())
+  description String   @db.Text
+  type        String   @db.VarChar(50)
+  userId      Int?
+  user        User?    @relation("ActivityUser", fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@map("maintenance_activities")
+}
+
 model Student {
   id          Int      @id @default(autoincrement())
   studentId   String   @unique @db.VarChar(20)
-
   firstName   String   @db.VarChar(100)
   lastName    String   @db.VarChar(100)
   email       String   @unique @db.VarChar(255)
-
   dob         DateTime
   gender      String   @db.VarChar(20)
   nationality String   @db.VarChar(100)
   phone       String?  @db.VarChar(20)
-
   address     String?  @db.VarChar(255)
   city        String?  @db.VarChar(100)
   state       String?  @db.VarChar(100)
   pincode     String?  @db.VarChar(10)
 
+  batch       String?  @db.VarChar(50)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   licenses    StudentLicense[]
   medicals    StudentMedical[]
   documents   StudentDocument[]
   account     StudentAccount?
+  invoices    Invoice[]
 
   @@map("students")
 }
@@ -205,30 +293,23 @@ model Student {
 model StudentLicense {
   id            Int      @id @default(autoincrement())
   studentId     Int
-
   licenseNumber String   @unique @db.VarChar(100)
   licenseType   String   @db.VarChar(50)
-
   issueDate     DateTime
   expiryDate    DateTime
-
   createdAt     DateTime @default(now())
-
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_licenses")
 }
 
 model StudentMedical {
-  id                        Int      @id @default(autoincrement())
-  studentId                 Int
-
-  medicalCertificateNumber  String   @unique @db.VarChar(100)
-  issueDate                 DateTime
-  expiryDate                DateTime
-
-  createdAt                 DateTime @default(now())
-
+  id                       Int      @id @default(autoincrement())
+  studentId                Int
+  medicalCertificateNumber String   @unique @db.VarChar(100)
+  issueDate                DateTime
+  expiryDate               DateTime
+  createdAt                DateTime @default(now())
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_medicals")
@@ -237,12 +318,9 @@ model StudentMedical {
 model StudentDocument {
   id           Int      @id @default(autoincrement())
   studentId    Int
-
   documentType String   @db.VarChar(100)
   fileUrl      String   @db.VarChar(255)
-
   uploadedAt   DateTime @default(now())
-
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_documents")
@@ -251,12 +329,9 @@ model StudentDocument {
 model StudentAccount {
   id           Int      @id @default(autoincrement())
   studentId    Int      @unique
-
   schoolEmail  String   @unique @db.VarChar(255)
   passwordHash String   @db.VarChar(255)
-
   createdAt    DateTime @default(now())
-
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_accounts")
@@ -286,20 +361,282 @@ model WeatherCheck {
   @@map("weather_checks")
 }
 
-model Aircraft {
-  id              String    @id @db.VarChar(50)
-  name            String    @db.VarChar(100)
-  model           String    @db.VarChar(100)
-  status          String    @default("Active") @db.VarChar(50)
-  capacity        Int?      @default(0)
-  fuelCapacity    Int?      @default(0)
-  type            String    @default("Passenger") @db.VarChar(50)
-  lastMaintenance DateTime? @db.Date
-  notes           String?   @db.Text
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+// ──────────────────────────────────────────────────────────────
+// DMS Models
+// ──────────────────────────────────────────────────────────────
 
-  @@map("aircrafts")
+model Document {
+  id             Int               @id @default(autoincrement())
+  title          String            @db.VarChar(255)
+  categoryId     Int
+  category       DocumentCategory  @relation(fields: [categoryId], references: [id])
+  status         DocumentStatus    @default(ACTIVE)
+  
+  // Relations to track who/what the document belongs to
+  studentId      Int?
+  instructorId   Int?
+  aircraftId     String?           @db.VarChar(50)
+
+  student        User?             @relation("StudentDocs", fields: [studentId], references: [id])
+  instructor     User?             @relation("InstructorDocs", fields: [instructorId], references: [id])
+  aircraft       Aircraft?         @relation(fields: [aircraftId], references: [id])
+
+  expiryDate     DateTime?
+  versions       DocumentVersion[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id           Int      @id @default(autoincrement())
+  documentId   Int
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version      Int      @default(1)
+  fileUrl      String   @db.Text
+  originalName String   @db.VarChar(255)
+  mimeType     String   @db.VarChar(100)
+  size         Int
+  description  String?  @db.Text
+  uploadedById Int?
+  uploadedAt   DateTime @default(now())
+
+  @@map("document_versions")
+}
+
+model DocumentCategory {
+  id                   Int        @id @default(autoincrement())
+  name                 String     @unique @db.VarChar(100)
+  description          String?    @db.Text
+  requiresExpiry       Boolean    @default(false)
+  warningThresholdDays Int        @default(30)
+  documents            Document[]
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  @@map("document_categories")
+}
+
+enum DocumentStatus {
+  ACTIVE
+  EXPIRED
+  ARCHIVED
+}
+
+// ──────────────────────────────────────────────────────────────
+// Courses & Pricing
+// ──────────────────────────────────────────────────────────────
+
+enum CourseLevel {
+  PPL
+  CPL
+  ATPL
+  IFR
+  MULTI_ENGINE
+  GROUND_SCHOOL
+  OTHER
+}
+
+model Course {
+  id            Int           @id @default(autoincrement())
+  code          String        @unique @db.VarChar(50)
+  name          String        @db.VarChar(200)
+  description   String?       @db.Text
+  level         CourseLevel
+  durationHours Float
+  price         Decimal       @db.Decimal(10, 2)
+  isActive      Boolean       @default(true)
+  createdBy     Int?
+  creator       User?         @relation("CourseCreator", fields: [createdBy], references: [id])
+  pricingRates  PricingRate[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("courses")
+}
+
+enum PricingCategory {
+  AIRCRAFT_RENTAL
+  INSTRUCTOR_FEE
+  COURSE_FEE
+  EXAM_FEE
+  GROUND_SCHOOL
+  OTHER
+}
+
+enum RateType {
+  HOURLY
+  FLAT
+  PER_SESSION
+}
+
+model PricingRate {
+  id            Int             @id @default(autoincrement())
+  name          String          @db.VarChar(200)
+  category      PricingCategory
+  rateType      RateType
+  amount        Decimal         @db.Decimal(10, 2)
+  currency      String          @default("INR") @db.VarChar(10)
+  courseId      Int?
+  course        Course?         @relation(fields: [courseId], references: [id])
+  effectiveFrom DateTime        @default(now())
+  isActive      Boolean         @default(true)
+  notes         String?         @db.Text
+  createdBy     Int?
+  creator       User?           @relation("PricingCreator", fields: [createdBy], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([courseId])
+  @@map("pricing_rates")
+}
+
+// ──────────────────────────────────────────────────────────────
+// Qualification Types & Records
+// ──────────────────────────────────────────────────────────────
+
+model QualificationType {
+  id          Int                   @id @default(autoincrement())
+  code        String                @unique @db.VarChar(50)
+  name        String                @db.VarChar(200)
+  description String?               @db.Text
+  isActive    Boolean               @default(true)
+  records     QualificationRecord[]
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@map("qualification_types")
+}
+
+model QualificationRecord {
+  id                  Int               @id @default(autoincrement())
+  qualificationTypeId Int
+  qualificationType   QualificationType @relation(fields: [qualificationTypeId], references: [id])
+  studentId           Int?
+  instructorId        Int?
+  issueDate           DateTime          @db.Date
+  expiryDate          DateTime?         @db.Date
+  certificateNumber   String?           @db.VarChar(100)
+  issuingAuthority    String?           @db.VarChar(200)
+  notes               String?           @db.Text
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([qualificationTypeId])
+  @@index([studentId])
+  @@index([instructorId])
+  @@map("qualification_records")
+}
+
+// ──────────────────────────────────────────────────────────────
+// T3 Module — Invoices
+// ──────────────────────────────────────────────────────────────
+model Invoice {
+  id            Int           @id @default(autoincrement())
+  invoiceNumber String        @unique @db.VarChar(50)
+  studentId     Int
+  student       Student       @relation(fields: [studentId], references: [id])
+  issuedById    Int
+  issuedBy      User          @relation("IssuedByUser", fields: [issuedById], references: [id])
+  status        InvoiceStatus @default(PENDING)
+  dueDate       DateTime?
+  issuedDate    DateTime      @default(now())
+  notes         String?       @db.Text
+  amount        Decimal       @db.Decimal(10, 2) @default(0)
+  paidAmount    Decimal       @db.Decimal(10, 2) @default(0)
+  items         InvoiceItem[]
+  payments      Payment[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          Int     @id @default(autoincrement())
+  invoiceId   Int
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String  @db.VarChar(255)
+  quantity    Int     @default(1)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  totalPrice  Decimal @db.Decimal(10, 2)
+
+  @@map("invoice_items")
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount    Decimal  @db.Decimal(10, 2)
+  paidAt    DateTime @default(now())
+  method    String?  @db.VarChar(50)
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("payments")
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+// ──────────────────────────────────────────────────────────────
+// Flying Slots / Sessions Models
+// ──────────────────────────────────────────────────────────────
+
+model FlyingSlot {
+  id           Int        @id @default(autoincrement())
+  date         DateTime   @db.Date
+  startTime    String     @db.VarChar(5) // e.g. '08:00'
+  endTime      String     @db.VarChar(5) // e.g. '10:00'
+  status       SlotStatus @default(SCHEDULED)
+  aircraft     String     @db.VarChar(50)
+  notes        String?    @db.Text
+
+  studentId    Int
+  instructorId Int
+
+  student      User       @relation("StudentSessions", fields: [studentId], references: [id])
+  instructor   User       @relation("InstructorSessions", fields: [instructorId], references: [id])
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("flying_slots")
+}
+
+model SlotRequest {
+  id                   Int           @id @default(autoincrement())
+  date                 DateTime      @db.Date
+  timePreference       String        @db.VarChar(100)
+  instructorPreference String        @db.VarChar(100)
+  aircraftPreference   String        @db.VarChar(50)
+  notes                String?       @db.Text
+  status               RequestStatus @default(PENDING)
+
+  studentId            Int
+  student              User          @relation("StudentRequests", fields: [studentId], references: [id])
+
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@map("slot_requests")
+}
+
+enum SlotStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model Schedule {

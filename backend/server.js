@@ -9,8 +9,14 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
 // Load environment variables from .env file
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const prisma = new PrismaClient();
@@ -35,6 +41,11 @@ app.use(express.json());
 
 // Parse URL-encoded bodies (form submissions)
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Serve uploaded files as static assets
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ──────────────────────────────────────────
 // Routes
@@ -70,34 +81,50 @@ app.get('/', (req, res) => {
 });
 
 // ──────────────────────────────────────────
-// TODO: Mount team module routers below
+// Team Module Routers
 // ──────────────────────────────────────────
 import studentsRouter from './routes/students.js';
+import maintenanceRouter from './routes/maintenance.js';
 import instructorsRouter from './routes/instructors.js';
 import weatherRouter from './routes/weather.js';
 import aircraftRouter from './routes/aircraft.js';
 import schedulesRouter from './routes/schedules.js';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import documentsRouter from './routes/documents.js';
+import documentCategoriesRouter from './routes/documentCategories.js';
+import coursesRouter from './routes/courses.js';
+import pricingRatesRouter from './routes/pricingRates.js';
+import qualificationTypesRouter from './routes/qualificationTypes.js';
+import qualificationRecordsRouter from './routes/qualificationRecords.js';
+import slotsRouter from './routes/slots.js';
+import slotRequestsRouter from './routes/slotRequests.js';
 
 app.use('/api/students', studentsRouter);
+app.use('/api/maintenance', maintenanceRouter);
 app.use('/api/instructors', instructorsRouter);
 app.use('/api/weather', weatherRouter);
 app.use('/api/planes', aircraftRouter);
+app.use('/api/aircraft', aircraftRouter);
 app.use('/api/schedules', schedulesRouter);
+app.use('/api/documents', documentsRouter);
+app.use('/api/document-categories', documentCategoriesRouter);
+app.use('/api/courses', coursesRouter);
+app.use('/api/pricing-rates', pricingRatesRouter);
+app.use('/api/qualification-types', qualificationTypesRouter);
+app.use('/api/qualification-records', qualificationRecordsRouter);
+app.use('/api/slots', slotsRouter);
+app.use('/api/slot-requests', slotRequestsRouter);
 
-// Serve uploaded files as static assets
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// T3 — Invoices Module
+import invoicesRouter from './routes/invoices.js';
+app.use('/api/invoices', invoicesRouter);
 
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
 });
 
-// Global error handler
-app.use((err, req, res, _next) => {
+// Global error handler — must have exactly 4 params for Express to treat as error handler
+app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error', details: err.message });
 });

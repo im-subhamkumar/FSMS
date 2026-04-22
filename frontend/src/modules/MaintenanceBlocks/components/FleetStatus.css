@@ -1,0 +1,36 @@
+.fleet-status-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-green { background-color: var(--accent-green); }
+.dot-red { background-color: var(--accent-red); }
+.dot-orange { background-color: #D97706; } /* Closer to In Maintenance color */
+.dot-gray { background-color: var(--text-muted); }
+
+.badge-orange {
+  background-color: rgba(217, 119, 6, 0.1);
+  color: #F59E0B;
+  border: 1px solid rgba(217, 119, 6, 0.2);
+}
