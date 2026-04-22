@@ -1,5 +1,5 @@
-﻿import React, { useEffect, useState } from "react";
-import { getAircrafts, deleteAircraft } from "./AircraftData";
+import React, { useEffect, useState } from "react";
+import { getAircrafts, deleteAircraft } from "./AircraftData.jsx";
 import AircraftTable from "./AircraftTable";
 import EditAircraftModal from "./EditAircraftModal";
 import { useNavigate } from "react-router-dom";

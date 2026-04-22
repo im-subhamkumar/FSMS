@@ -1,6 +1,6 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { deleteAircraft } from "./AircraftData";
+import { getAircrafts, deleteAircraft } from "./AircraftData.jsx";
 import EditAircraftModal from "./EditAircraftModal";
 import StatusBadge from "./StatusBadge";
 import { ArrowLeft, Edit2, Trash2, Plane, Save, Calendar, Clock, Fuel, Users } from "lucide-react";

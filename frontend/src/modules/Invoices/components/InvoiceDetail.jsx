@@ -2,12 +2,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
-import { ArrowLeft, Trash2, Printer, CheckCheck, AlertCircle, Clock, IndianRupee } from 'lucide-react';
+import { ArrowLeft, Trash2, Printer, CheckCheck, AlertCircle, Clock, IndianRupee, Edit2 } from 'lucide-react';
 import { useInvoices } from '../hooks/useInvoices';
 import StatusBadge from './StatusBadge';
 import PrintableInvoice from './PrintableInvoice';
 import RecordPaymentModal from './RecordPaymentModal';
-import { Edit2 } from 'lucide-react';
 
 const fmt     = (val) => new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(val) || 0);
 const fmtDate = (d)   => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
