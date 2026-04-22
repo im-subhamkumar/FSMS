@@ -23,10 +23,7 @@ const PORT = process.env.PORT || 3000;
 // CORS — allow requests from the Vite frontend
 app.use(
   cors({
-    origin: [
-      'http://localhost:5173',           // local dev (host machine)
-      'http://frontend:5173',            // docker network alias
-    ],
+    origin: '*', // For development, allow all origins to prevent CORS blocks
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id'],
     credentials: true,
@@ -79,6 +76,7 @@ import studentsRouter from './routes/students.js';
 import instructorsRouter from './routes/instructors.js';
 import weatherRouter from './routes/weather.js';
 import aircraftRouter from './routes/aircraft.js';
+import schedulesRouter from './routes/schedules.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
@@ -87,7 +85,8 @@ const __dirname = dirname(__filename);
 app.use('/api/students', studentsRouter);
 app.use('/api/instructors', instructorsRouter);
 app.use('/api/weather', weatherRouter);
-app.use('/api/aircraft', aircraftRouter);
+app.use('/api/planes', aircraftRouter);
+app.use('/api/schedules', schedulesRouter);
 
 // Serve uploaded files as static assets
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
