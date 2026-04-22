@@ -14,7 +14,7 @@ const AIRPORTS_DB = [
   { icao: 'OMDB', name: 'Dubai International', location: 'Dubai, UAE' }
 ];
 
-export default function Header({ onSearch, isLive, stationId }) {
+export default function Header({ onSearch, stationId }) {
   const [inputValue, setInputValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef(null);

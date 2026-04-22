@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ChevronLeft, Edit2, User, ShieldCheck, HeartPulse,
@@ -14,9 +14,9 @@ export default function StudentProfile() {
 
   useEffect(() => {
     fetchStudent();
-  }, [id]);
+  }, [id, fetchStudent]);
 
-  const fetchStudent = async () => {
+  const fetchStudent = useCallback(async () => {
     try {
       const res = await fetch(`http://localhost:3000/api/students/${id}`);
       const data = await res.json();
@@ -26,7 +26,7 @@ export default function StudentProfile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   if (loading) {
     return (

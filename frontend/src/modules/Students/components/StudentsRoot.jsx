@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Users, UserPlus, Search, Edit2, Trash2, HeartPulse, 
@@ -15,7 +15,7 @@ export default function StudentsRoot() {
 
   const perPage = 10;
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       const res = await fetch("http://localhost:3000/api/students");
       const data = await res.json();
@@ -29,11 +29,11 @@ export default function StudentsRoot() {
       console.error("Network error fetching students:", err);
       setStudents([]); // Fallback to empty array
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchStudents();
-  }, []);
+  }, [fetchStudents]);
 
   const deleteStudent = async (id) => {
     if (!window.confirm("Delete student?")) return;

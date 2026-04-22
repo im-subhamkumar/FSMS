@@ -18,7 +18,7 @@ const EditAircraftModal = ({ aircraft, onClose, onRefresh }) => {
       await updateAircraft(form);
       onRefresh();
       onClose();
-    } catch (e) {
+    } catch {
       alert("Failed to update aircraft");
       setIsSaving(false);
     }

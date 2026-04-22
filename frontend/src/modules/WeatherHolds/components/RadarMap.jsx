@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import axios from 'axios';
+import 'leaflet/dist/leaflet.css';
 
 export default function RadarMap({ lat, lon, stationId }) {
   const [frames, setFrames] = useState([]);
   const [currentFrameIdx, setCurrentFrameIdx] = useState(0);
   const [animating, setAnimating] = useState(true);
   const [mapReady, setMapReady] = useState(false);
-  const [mapKey, setMapKey] = useState(Date.now());
-  const mapRef = useRef(null);
+  const [mapKey, setMapKey] = useState(() => Date.now());
+
 
   // Set mapReady after initial mount to avoid server/client mismatch
   // And update mapKey on unmount to appease React 18 Strict Mode
@@ -48,7 +48,6 @@ export default function RadarMap({ lat, lon, stationId }) {
     return () => clearInterval(interval);
   }, [animating, frames]);
 
-  const toggleAnimation = () => setAnimating(!animating);
 
   const currentFrame = frames[currentFrameIdx];
   const host = 'https://tilecache.rainviewer.com';
