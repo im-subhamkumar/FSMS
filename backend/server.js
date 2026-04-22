@@ -29,10 +29,7 @@ const PORT = process.env.PORT || 3000;
 // CORS — allow requests from the Vite frontend
 app.use(
   cors({
-    origin: [
-      'http://localhost:5173',           // local dev (host machine)
-      'http://frontend:5173',            // docker network alias
-    ],
+    origin: '*', // For development, allow all origins to prevent CORS blocks
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id'],
     credentials: true,
@@ -91,6 +88,7 @@ import maintenanceRouter from './routes/maintenance.js';
 import instructorsRouter from './routes/instructors.js';
 import weatherRouter from './routes/weather.js';
 import aircraftRouter from './routes/aircraft.js';
+import schedulesRouter from './routes/schedules.js';
 import documentsRouter from './routes/documents.js';
 import documentCategoriesRouter from './routes/documentCategories.js';
 import coursesRouter from './routes/courses.js';
@@ -104,7 +102,9 @@ app.use('/api/students', studentsRouter);
 app.use('/api/maintenance', maintenanceRouter);
 app.use('/api/instructors', instructorsRouter);
 app.use('/api/weather', weatherRouter);
+app.use('/api/planes', aircraftRouter);
 app.use('/api/aircraft', aircraftRouter);
+app.use('/api/schedules', schedulesRouter);
 app.use('/api/documents', documentsRouter);
 app.use('/api/document-categories', documentCategoriesRouter);
 app.use('/api/courses', coursesRouter);

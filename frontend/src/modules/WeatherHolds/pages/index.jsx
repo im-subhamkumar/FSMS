@@ -2,11 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 // Import migrated components
 import Header from '../components/Header';
 import FlightCategoryCard from '../components/FlightCategoryCard';
-import MetarCard from '../components/MetarCard';
-import TafCard from '../components/TafCard';
-import RadarMap from '../components/RadarMap';
 import GoNoGoCard from '../components/GoNoGoCard';
-import AtmosCard from '../components/AtmosCard';
 import HistoryPanel from '../components/HistoryPanel';
 
 const REFRESH_INTERVAL = 300; // 5 minutes in seconds
@@ -26,6 +22,7 @@ export default function WeatherHoldsPage() {
 
   const [tafError, setTafError] = useState('');
   const [atmosError, setAtmosError] = useState('');
+  const [schedules, setSchedules] = useState([]);
 
   // Auto-refresh state
   const [countdown, setCountdown] = useState(REFRESH_INTERVAL);
@@ -114,8 +111,21 @@ export default function WeatherHoldsPage() {
   };
 
   useEffect(() => {
-    if (icao) fetchGoNoGo(icao, studentType);
+    if (icao) {
+      fetchGoNoGo(icao, studentType);
+      fetchSchedules();
+    }
   }, [studentType]);
+
+  const fetchSchedules = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/schedules`);
+      const data = await res.json();
+      setSchedules(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     handleSearch(icao);
@@ -181,26 +191,58 @@ export default function WeatherHoldsPage() {
       {showHistory ? (
         <HistoryPanel onClose={() => setShowHistory(false)} />
       ) : (
-        <main className="grid grid-cols-1 lg:grid-cols-[360px_1fr_360px] gap-4 p-4 lg:px-5">
-          <section className="flex flex-col gap-4">
-            <FlightCategoryCard
-              category={metarData?.flight_category}
-              stationId={metarData?.station_id}
-              obsTime={metarData?.obs_time}
-              stationName={metarData?.name}
-            />
-            <MetarCard metarData={metarData} />
-            <TafCard tafData={tafData} error={tafError} isLoading={loading && !tafData} />
-          </section>
+        <main className="max-w-4xl mx-auto p-4 lg:px-5">
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FlightCategoryCard
+                category={metarData?.flight_category}
+                stationId={metarData?.station_id}
+                obsTime={metarData?.obs_time}
+                stationName={metarData?.name}
+              />
+              <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl border border-blue-500/20 dark:border-slate-700/50 p-6 rounded-2xl shadow-lg flex flex-col justify-center items-center text-center">
+                <span className="text-4xl mb-2">📍</span>
+                <h2 className="text-xl font-bold">{metarData?.name || icao}</h2>
+                <p className="text-slate-500 dark:text-slate-400">Current Station Observation</p>
+                <div className="mt-4 text-2xl font-black text-blue-600 dark:text-blue-400">
+                  {metarData?.temperature_c}°C
+                </div>
+              </div>
+            </div>
 
-          <section className="flex flex-col gap-4 h-[500px] lg:h-auto">
-            <RadarMap lat={metarData?.lat} lon={metarData?.lon} stationId={metarData?.station_id} />
-          </section>
-
-          <section className="flex flex-col gap-4">
             <GoNoGoCard studentType={studentType} setStudentType={setStudentType} goNoGoData={goNoGoData} />
-            <AtmosCard atmosData={atmosData} error={atmosError} isLoading={loading && !atmosData} />
-          </section>
+            
+            {/* Minimal Slots Preview */}
+            <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl border border-blue-500/20 dark:border-slate-700/50 p-6 rounded-2xl shadow-lg">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <span>📅</span> Upcoming Flight Slots
+              </h3>
+              {schedules.length === 0 ? (
+                <p className="text-slate-500 dark:text-slate-400 text-sm italic py-4 text-center">No active slots found.</p>
+              ) : (
+                <div className="space-y-3">
+                  {schedules.slice(0, 3).map(slot => (
+                    <div key={slot.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-700/50 text-sm">
+                      <div>
+                        <div className="font-bold">{slot.traineeName}</div>
+                        <div className="text-xs text-slate-500">{new Date(slot.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {slot.aircraftId}</div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${slot.status === 'CANCELLED' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
+                        {slot.status}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="pt-2 text-center">
+                    <a href="/flying-slots" className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">View All Slots →</a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="text-center text-sm text-slate-500 dark:text-slate-400 mt-4 px-10">
+              <p>This dashboard provides a simplified safety overview based on real-time aviation reports. Always consult official briefing sources before flight.</p>
+            </div>
+          </div>
         </main>
       )}
 

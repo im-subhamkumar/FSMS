@@ -1,26 +1,115 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 export default function FlyingSlotsRoot() {
     const [slots, setSlots] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [formData, setFormData] = useState({ date: '', startTime: '', endTime: '', instructor: '', student: '', aircraft: '', status: 'Scheduled' });
+    const [formData, setFormData] = useState({ 
+        date: '', startTime: '', endTime: '', 
+        instructor: '', instructorId: '',
+        student: '', traineeId: '',
+        aircraft: '', aircraftId: '',
+        status: 'Scheduled' 
+    });
     const [editId, setEditId] = useState(null);
     
     // View state
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
+    // Weather schedule state
+    const [schedules, setSchedules] = useState([]);
+    const [syncing, setSyncing] = useState(false);
+
+    // Dropdown data
+    const [students, setStudents] = useState([]);
+    const [instructors, setInstructors] = useState([]);
+    const [aircraftList, setAircraftList] = useState([]);
+
     useEffect(() => {
         fetchSlots();
+        fetchSchedules();
+        fetchDropdownData();
     }, []);
+
+    const fetchDropdownData = async () => {
+        try {
+            const [sRes, iRes, aRes] = await Promise.all([
+                fetch(`${API_BASE}/students`),
+                fetch(`${API_BASE}/instructors`),
+                fetch(`${API_BASE}/aircraft`)
+            ]);
+            
+            if (sRes.ok) setStudents(await sRes.json());
+            if (iRes.ok) {
+                const iData = await iRes.json();
+                setInstructors(iData.data || iData); 
+            }
+            if (aRes.ok) {
+                const aData = await aRes.json();
+                setAircraftList(aData.data || aData); // Handle {data:[]} wrapper
+            }
+        } catch (err) { console.error('Failed to fetch dropdown data:', err); }
+    };
+
+    const fetchSchedules = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/schedules`);
+            if (res.ok) {
+                const data = await res.json();
+                setSchedules(Array.isArray(data) ? data : []);
+            }
+        } catch (err) { console.error('Failed to fetch schedules:', err); }
+    };
+
+    const handleSyncWeather = async () => {
+        setSyncing(true);
+        try {
+            await fetch(`${API_BASE}/schedules/sync-weather`, { method: 'POST' });
+            await fetchSchedules();
+        } catch (err) { console.error(err); }
+        finally { setSyncing(false); }
+    };
+
+    const handleDeleteSchedule = async (id) => {
+        if (!confirm('Delete this weather schedule?')) return;
+        try {
+            await fetch(`${API_BASE}/schedules/${id}`, { method: 'DELETE' });
+            fetchSchedules();
+        } catch (err) { console.error(err); }
+    };
 
     const fetchSlots = async () => {
         try {
-            const response = await fetch('http://localhost:3000/api/slots');
+            // Using API_BASE/schedules instead of /slots to get weather data
+            const response = await fetch(`${API_BASE}/schedules`);
             if (response.ok) {
                 const data = await response.json();
-                setSlots(data);
+                
+                // Map the Schedule model format to the UI's expected slot format
+                const mappedSlots = data.map(s => {
+                    const startDate = new Date(s.startTime);
+                    const endDate = new Date(s.endTime);
+                    return {
+                        id: s.id,
+                        date: startDate.toISOString().split('T')[0],
+                        startTime: startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+                        endTime: endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+                        student: s.traineeName || `Trainee #${s.traineeId}`,
+                        instructor: s.instructorName || `Instructor #${s.instructorId}`,
+                        aircraft: s.aircraftId,
+                        status: s.status === 'SCHEDULED' ? 'Scheduled' : s.status === 'CANCELLED' ? 'Cancelled' : s.status,
+                        // Attach weather data for display in lists
+                        weatherVerdict: s.weatherVerdict,
+                        extremeWeatherWarning: s.extremeWeatherWarning,
+                        cancellationReason: s.cancellationReason
+                    };
+                });
+                
+                setSlots(mappedSlots);
+                setSchedules(data); // Keep raw schedules for the detail section
             }
         } catch (error) {
             console.error('Error fetching slots:', error);
@@ -53,26 +142,36 @@ export default function FlyingSlotsRoot() {
         }
 
         try {
+            // Prepare data for the /api/schedules endpoint (expects ISO strings for times)
+            const startISO = new Date(`${formData.date}T${formData.startTime}`).toISOString();
+            const endISO = formData.endTime 
+                ? new Date(`${formData.date}T${formData.endTime}`).toISOString()
+                : new Date(new Date(`${formData.date}T${formData.startTime}`).getTime() + 2*60*60*1000).toISOString(); // Default 2h
+
+            const payload = {
+                traineeId: formData.traineeId,
+                traineeName: formData.student,
+                instructorId: formData.instructorId,
+                instructorName: formData.instructor,
+                aircraftId: formData.aircraft,
+                startTime: startISO,
+                endTime: endISO
+            };
+
             if (editId) {
-                const response = await fetch(`http://localhost:3000/api/slots/${editId}`, {
+                const response = await fetch(`${API_BASE}/schedules/${editId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify(payload)
                 });
-                if (response.ok) {
-                    const updatedSlot = await response.json();
-                    setSlots(slots.map(s => s.id === editId ? updatedSlot : s));
-                }
+                if (response.ok) fetchSlots();
             } else {
-                const response = await fetch('http://localhost:3000/api/slots', {
+                const response = await fetch(`${API_BASE}/schedules`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify(payload)
                 });
-                if (response.ok) {
-                    const newSlot = await response.json();
-                    setSlots([...slots, newSlot]);
-                }
+                if (response.ok) fetchSlots();
             }
         } catch (error) {
             console.error('Error saving slot:', error);
@@ -81,10 +180,12 @@ export default function FlyingSlotsRoot() {
     };
 
     const getStatusStyles = (status) => {
-        switch (status) {
-            case 'Completed': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800';
-            case 'Cancelled': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800';
-            case 'Scheduled': default: return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800';
+        switch (status?.toUpperCase()) {
+            case 'SCHEDULED': return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800';
+            case 'CANCELLED': return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800';
+            case 'AWAITING': return 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800';
+            case 'COMPLETED': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800';
+            default: return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
         }
     };
 
@@ -114,6 +215,11 @@ export default function FlyingSlotsRoot() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900 dark:text-white">{slot.date}</div>
                                         <div className="text-sm text-gray-500 dark:text-gray-400">{slot.startTime} - {slot.endTime}</div>
+                                        {slot.weatherVerdict && (
+                                            <div className={`mt-1 text-[10px] font-bold uppercase inline-flex items-center px-1.5 py-0.5 rounded-md ${slot.weatherVerdict === 'GO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                {slot.weatherVerdict}
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
@@ -221,6 +327,12 @@ export default function FlyingSlotsRoot() {
                                                             {slot.student} <span className="text-gray-400 mx-1">with</span> {slot.instructor}
                                                         </div>
                                                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-mono bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">{slot.aircraft}</div>
+                                                        
+                                                        {slot.weatherVerdict && (
+                                                            <div className={`ml-2 text-[10px] font-bold uppercase inline-flex items-center px-1.5 py-0.5 rounded-md ${slot.weatherVerdict === 'GO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                                Weather: {slot.weatherVerdict}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-bold border ${getStatusStyles(slot.status)}`}>
                                                         {slot.status}
@@ -288,11 +400,66 @@ export default function FlyingSlotsRoot() {
                         <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
                         Add Slot
                     </button>
+
+                    <button
+                        onClick={handleSyncWeather}
+                        disabled={syncing}
+                        className="inline-flex w-full sm:w-auto items-center justify-center px-4 py-2 border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                    >
+                        {syncing ? '⏳ Syncing...' : '🔄 Sync Weather'}
+                    </button>
                 </div>
             </div>
 
             {/* Main Content Area */}
             {viewMode === 'list' ? renderList() : renderCalendar()}
+
+            {/* Weather Schedules Section */}
+            {schedules.length > 0 && (
+                <div className="mt-6">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <span>🌤️</span> Weather-Checked Schedules
+                    </h2>
+                    <div className="space-y-3">
+                        {schedules.map(slot => (
+                            <div key={slot.id} className={`relative bg-white dark:bg-gray-800 rounded-xl p-5 border shadow-sm ${slot.status === 'CANCELLED' ? 'border-red-300 dark:border-red-800' : 'border-gray-200 dark:border-gray-700'}`}>
+                                <div className="flex flex-wrap justify-between items-start gap-4">
+                                    <div className="flex gap-4">
+                                        <div className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center font-bold text-xs ${slot.status === 'CANCELLED' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'}`}>
+                                            <span>{new Date(slot.startTime).toLocaleDateString(undefined, { month: 'short' })}</span>
+                                            <span className="text-lg leading-none">{new Date(slot.startTime).toLocaleDateString(undefined, { day: '2-digit' })}</span>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-lg text-gray-900 dark:text-white">{slot.traineeName || 'Trainee #' + slot.traineeId}</h3>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">with {slot.instructorName || 'Instructor'} • {slot.aircraftId}</p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full font-bold text-gray-700 dark:text-gray-300">
+                                                    {new Date(slot.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(slot.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                                <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase ${slot.status === 'CANCELLED' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
+                                                    {slot.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => handleDeleteSchedule(slot.id)} className="text-gray-400 hover:text-red-500 transition-colors p-2">🗑️</button>
+                                </div>
+                                {slot.weatherVerdict && (
+                                    <div className={`mt-4 p-4 rounded-xl text-sm ${slot.weatherVerdict === 'GO' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'}`}>
+                                        <div className="font-bold flex items-center gap-1.5 mb-1">{slot.weatherVerdict === 'GO' ? '✅ Weather: GO' : '❌ Weather: NO-GO'}</div>
+                                        {slot.cancellationReason && <p className="opacity-90">{slot.cancellationReason}</p>}
+                                    </div>
+                                )}
+                                {slot.extremeWeatherWarning && (
+                                    <div className="mt-2 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm font-medium animate-pulse">
+                                        {slot.extremeWeatherWarning}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Modal */}
             {isModalOpen && (
@@ -330,16 +497,62 @@ export default function FlyingSlotsRoot() {
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Instructor *</label>
-                                                <input type="text" name="instructor" value={formData.instructor} onChange={handleInputChange} placeholder="e.g. Capt. Smith" className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" required />
+                                                <select 
+                                                    name="instructor" 
+                                                    value={`${formData.instructor}|${formData.instructorId}`} 
+                                                    onChange={(e) => {
+                                                        const [name, id] = e.target.value.split('|');
+                                                        setFormData(prev => ({ ...prev, instructor: name, instructorId: id }));
+                                                    }} 
+                                                    className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
+                                                    required
+                                                >
+                                                    <option value="">Select Instructor</option>
+                                                    {instructors.map(i => {
+                                                        const fullName = i.user ? `${i.user.firstName} ${i.user.lastName}` : (i.name || 'Unknown');
+                                                        return (
+                                                            <option key={i.id} value={`${fullName}|${i.id}`}>
+                                                                {fullName}
+                                                            </option>
+                                                        );
+                                                    })}
+                                                </select>
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Student *</label>
-                                                <input type="text" name="student" value={formData.student} onChange={handleInputChange} placeholder="e.g. John Doe" className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" required />
+                                                <select 
+                                                    name="student" 
+                                                    value={`${formData.student}|${formData.traineeId}`} 
+                                                    onChange={(e) => {
+                                                        const [name, id] = e.target.value.split('|');
+                                                        setFormData(prev => ({ ...prev, student: name, traineeId: id }));
+                                                    }} 
+                                                    className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
+                                                    required
+                                                >
+                                                    <option value="">Select Student</option>
+                                                    {students.map(s => (
+                                                        <option key={s.id} value={`${s.firstName} ${s.lastName}|${s.id}`}>
+                                                            {s.firstName} {s.lastName} ({s.studentId})
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             </div>
                                             <div className="grid grid-cols-2 gap-5">
                                                 <div>
                                                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Aircraft *</label>
-                                                    <input type="text" name="aircraft" value={formData.aircraft} onChange={handleInputChange} placeholder="e.g. C-172 (N1234)" className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" required />
+                                                    <select 
+                                                        name="aircraft" 
+                                                        value={formData.aircraft} 
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, aircraft: e.target.value }))} 
+                                                        className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
+                                                        required
+                                                    >
+                                                        <option value="">Select Aircraft</option>
+                                                        {aircraftList.map(a => (
+                                                            <option key={a.id} value={a.id}>{a.tailNumber || a.id} - {a.model}</option>
+                                                        ))}
+                                                    </select>
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Status</label>

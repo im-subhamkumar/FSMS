@@ -28,7 +28,7 @@ const HAZARD_CODES = {
 };
 
 // ── METAR Parser ────────────────────────────────────────────────────────────────
-function parseMetar(raw) {
+export function parseMetar(raw) {
     const result = {
         raw: raw,
         wind_dir: null,
@@ -127,7 +127,7 @@ function parseMetar(raw) {
 }
 
 // ── Go/No-Go Engine ─────────────────────────────────────────────────────────────
-function computeGoNoGo(metarData, studentType) {
+export function computeGoNoGo(metarData, studentType) {
     let verdict = 'GO';
     const reasons = [];
     const warnings = [];
@@ -235,7 +235,7 @@ router.get('/openmeteo', async (req, res) => {
     const { lat, lon } = req.query;
     if (!lat || !lon) return res.status(400).json({ error: 'Missing lat/lon' });
     try {
-        const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m`);
+        const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,precipitation,weathercode&forecast_days=2`);
         const data = await resp.json();
         res.json(data);
     } catch (e) {
@@ -251,8 +251,29 @@ router.post('/gonogo', async (req, res) => {
         const data = await resp.json();
         if (!data || data.length === 0) return res.status(404).json({ error: 'No data' });
         
-        const metar = parseMetar(data[0].rawOb || '');
+        const entry = data[0];
+        const metar = parseMetar(entry.rawOb || '');
         const result = computeGoNoGo(metar, student_type || 'pre_solo');
+        
+        // Add extreme weather prediction check
+        try {
+            const atmosResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${entry.lat}&longitude=${entry.lon}&hourly=windspeed_10m,precipitation,weathercode&forecast_days=2`);
+            const atmosData = await atmosResp.json();
+            
+            if (atmosData.hourly) {
+                const maxWind = Math.max(...atmosData.hourly.windspeed_10m);
+                const maxPrecip = Math.max(...atmosData.hourly.precipitation);
+                const hasHeavyRain = atmosData.hourly.weathercode.some(c => c >= 65 && c <= 99);
+                
+                if (maxWind > 40) {
+                    result.extreme_warning = `🚨 Cyclone Forecast: High winds (${maxWind.toFixed(1)} km/h) predicted within 48h!`;
+                } else if (hasHeavyRain || maxPrecip > 10) {
+                    result.extreme_warning = `🌧️ Heavy Rain Alert: Torrential rainfall predicted within 48h.`;
+                }
+            }
+        } catch (e) {
+            console.error('Extreme weather check failed', e);
+        }
         
         res.json(result);
     } catch (e) {
