@@ -1,4 +1,6 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 export default function FlyingSlotsRoot() {
     const [slots, setSlots] = useState([]);
@@ -11,9 +13,41 @@ export default function FlyingSlotsRoot() {
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
+    // Weather schedule state
+    const [schedules, setSchedules] = useState([]);
+    const [syncing, setSyncing] = useState(false);
+
     useEffect(() => {
         fetchSlots();
+        fetchSchedules();
     }, []);
+
+    const fetchSchedules = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/schedules`);
+            if (res.ok) {
+                const data = await res.json();
+                setSchedules(Array.isArray(data) ? data : []);
+            }
+        } catch (err) { console.error('Failed to fetch schedules:', err); }
+    };
+
+    const handleSyncWeather = async () => {
+        setSyncing(true);
+        try {
+            await fetch(`${API_BASE}/schedules/sync-weather`, { method: 'POST' });
+            await fetchSchedules();
+        } catch (err) { console.error(err); }
+        finally { setSyncing(false); }
+    };
+
+    const handleDeleteSchedule = async (id) => {
+        if (!confirm('Delete this weather schedule?')) return;
+        try {
+            await fetch(`${API_BASE}/schedules/${id}`, { method: 'DELETE' });
+            fetchSchedules();
+        } catch (err) { console.error(err); }
+    };
 
     const fetchSlots = async () => {
         try {
@@ -288,11 +322,66 @@ export default function FlyingSlotsRoot() {
                         <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
                         Add Slot
                     </button>
+
+                    <button
+                        onClick={handleSyncWeather}
+                        disabled={syncing}
+                        className="inline-flex w-full sm:w-auto items-center justify-center px-4 py-2 border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                    >
+                        {syncing ? '⏳ Syncing...' : '🔄 Sync Weather'}
+                    </button>
                 </div>
             </div>
 
             {/* Main Content Area */}
             {viewMode === 'list' ? renderList() : renderCalendar()}
+
+            {/* Weather Schedules Section */}
+            {schedules.length > 0 && (
+                <div className="mt-6">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <span>🌤️</span> Weather-Checked Schedules
+                    </h2>
+                    <div className="space-y-3">
+                        {schedules.map(slot => (
+                            <div key={slot.id} className={`relative bg-white dark:bg-gray-800 rounded-xl p-5 border shadow-sm ${slot.status === 'CANCELLED' ? 'border-red-300 dark:border-red-800' : 'border-gray-200 dark:border-gray-700'}`}>
+                                <div className="flex flex-wrap justify-between items-start gap-4">
+                                    <div className="flex gap-4">
+                                        <div className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center font-bold text-xs ${slot.status === 'CANCELLED' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'}`}>
+                                            <span>{new Date(slot.startTime).toLocaleDateString(undefined, { month: 'short' })}</span>
+                                            <span className="text-lg leading-none">{new Date(slot.startTime).toLocaleDateString(undefined, { day: '2-digit' })}</span>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-lg text-gray-900 dark:text-white">{slot.traineeName || 'Trainee #' + slot.traineeId}</h3>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">with {slot.instructorName || 'Instructor'} • {slot.aircraftId}</p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full font-bold text-gray-700 dark:text-gray-300">
+                                                    {new Date(slot.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(slot.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                                <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase ${slot.status === 'CANCELLED' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
+                                                    {slot.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => handleDeleteSchedule(slot.id)} className="text-gray-400 hover:text-red-500 transition-colors p-2">🗑️</button>
+                                </div>
+                                {slot.weatherVerdict && (
+                                    <div className={`mt-4 p-4 rounded-xl text-sm ${slot.weatherVerdict === 'GO' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'}`}>
+                                        <div className="font-bold flex items-center gap-1.5 mb-1">{slot.weatherVerdict === 'GO' ? '✅ Weather: GO' : '❌ Weather: NO-GO'}</div>
+                                        {slot.cancellationReason && <p className="opacity-90">{slot.cancellationReason}</p>}
+                                    </div>
+                                )}
+                                {slot.extremeWeatherWarning && (
+                                    <div className="mt-2 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm font-medium animate-pulse">
+                                        {slot.extremeWeatherWarning}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Modal */}
             {isModalOpen && (
