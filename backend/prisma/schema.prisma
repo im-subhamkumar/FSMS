@@ -24,6 +24,8 @@ model User {
   createdAircraft  Aircraft[] @relation("AircraftCreator")
   reportedSquawks  Squawk[]   @relation("SquawkReporter")
   activities       MaintenanceActivity[] @relation("ActivityUser")
+  createdCourses   Course[]   @relation("CourseCreator")
+  createdPricing   PricingRate[] @relation("PricingCreator")
 
   @@map("users")
   // Relations for Flying Slots
@@ -585,4 +587,60 @@ model QualificationRecord {
   @@index([instructorId])
   @@map("qualification_records")
 }
+
+// ──────────────────────────────────────────────────────────────
+// Flying Slots / Sessions Models
+// ──────────────────────────────────────────────────────────────
+
+model FlyingSlot {
+  id           Int        @id @default(autoincrement())
+  date         DateTime   @db.Date
+  startTime    String     @db.VarChar(5) // e.g. '08:00'
+  endTime      String     @db.VarChar(5) // e.g. '10:00'
+  status       SlotStatus @default(SCHEDULED)
+  aircraft     String     @db.VarChar(50)
+  notes        String?    @db.Text
+
+  studentId    Int
+  instructorId Int
+
+  student      User       @relation("StudentSessions", fields: [studentId], references: [id])
+  instructor   User       @relation("InstructorSessions", fields: [instructorId], references: [id])
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("flying_slots")
+}
+
+model SlotRequest {
+  id                   Int           @id @default(autoincrement())
+  date                 DateTime      @db.Date
+  timePreference       String        @db.VarChar(100)
+  instructorPreference String        @db.VarChar(100)
+  aircraftPreference   String        @db.VarChar(50)
+  notes                String?       @db.Text
+  status               RequestStatus @default(PENDING)
+
+  studentId            Int
+  student              User          @relation("StudentRequests", fields: [studentId], references: [id])
+
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@map("slot_requests")
+}
+
+enum SlotStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 
