@@ -130,7 +130,6 @@ router.put('/:id', async (req, res) => {
     res.json(updatedAircraft);
   } catch (error) {
     if (error.code === 'P2025') {
-      // Prisma error code for 'Record to update not found.'
       return res.status(404).json({ error: 'Aircraft not found' });
     }
     console.error('Error updating aircraft:', error);

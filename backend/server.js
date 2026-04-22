@@ -111,6 +111,10 @@ app.use('/api/qualification-records', qualificationRecordsRouter);
 app.use('/api/slots', slotsRouter);
 app.use('/api/slot-requests', slotRequestsRouter);
 
+// T3 — Invoices Module
+import invoicesRouter from './routes/invoices.js';
+app.use('/api/invoices', invoicesRouter);
+
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });

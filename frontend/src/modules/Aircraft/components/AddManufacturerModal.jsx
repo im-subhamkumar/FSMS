@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 
 const AddManufacturerModal = ({ onClose, onAdd }) => {
   const [name, setName] = useState("");

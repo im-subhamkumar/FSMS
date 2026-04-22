@@ -20,24 +20,24 @@ model User {
   updatedAt  DateTime    @updatedAt
   instructor Instructor?
 
+  studentDocuments    Document[] @relation("StudentDocs")
+  instructorDocuments Document[] @relation("InstructorDocs")
   assignedAircraft Aircraft[] @relation("AssignedAme")
   createdAircraft  Aircraft[] @relation("AircraftCreator")
   reportedSquawks  Squawk[]   @relation("SquawkReporter")
   activities       MaintenanceActivity[] @relation("ActivityUser")
   createdCourses   Course[]   @relation("CourseCreator")
   createdPricing   PricingRate[] @relation("PricingCreator")
-
-  @@map("users")
-  // Relations for Flying Slots
+  
+  // Relations for Flying Slots module
   sessionsAsStudent     FlyingSlot[]  @relation("StudentSessions")
   sessionsAsInstructor  FlyingSlot[]  @relation("InstructorSessions")
   requestsAsStudent     SlotRequest[] @relation("StudentRequests")
-  
-  studentDocuments      Document[] @relation("StudentDocs")
-  instructorDocuments   Document[] @relation("InstructorDocs")
-  createdCourses        Course[]   @relation("CourseCreator")
-  createdPricing        PricingRate[] @relation("PricingCreator")
 
+  // T3 — Invoice relations
+  invoicesIssued   Invoice[]     @relation("IssuedByUser")
+
+  @@map("users")
 }
 
 model Instructor {
@@ -153,6 +153,7 @@ enum Role {
   STAFF
 }
 
+
 enum InstructorDesignation {
   CHIEF_FLIGHT_INSTRUCTOR
   SENIOR_FLIGHT_INSTRUCTOR
@@ -201,28 +202,24 @@ enum AircraftStatus {
 // ── Aircraft model — owned by Aircraft team, extended by Maintenance ──
 model Aircraft {
   id              String         @id @db.VarChar(50)
-  tailNumber      String         @unique @db.VarChar(50)
-  name            String?        @db.VarChar(100)
+  tailNumber      String         @db.VarChar(50)
+  name            String         @db.VarChar(100)
   manufacturer    String?        @db.VarChar(100)
   model           String         @db.VarChar(100)
   serialNumber    String?        @db.VarChar(100)
   yearOfManufacture Int?
-
-  cruisingRange   Int?
-  mtow            Int?
-  emptyWeight     Int?
+  cruisingRange   Int?           @default(0)
+  mtow            Int?           @default(0)
+  emptyWeight     Int?           @default(0)
   fuelCapacity    Int?           @default(0)
   capacity        Int?           @default(0)
-
   lastMaintenance DateTime?      @db.Date
-  maintenanceSchedule String?    @db.VarChar(50)
-  totalFlightHours Float?        @default(0)
-  maintenanceStatus String?      @db.VarChar(50)
-  insuranceExpiryDate DateTime?  @db.Date
-
+  maintenanceSchedule String?      @db.VarChar(100)
+  totalFlightHours Float?         @default(0)
+  maintenanceStatus String?        @db.VarChar(50)
+  insuranceExpiryDate DateTime?    @db.Date
   status          String         @default("Active") @db.VarChar(50)
   availability    String         @default("Available") @db.VarChar(50)
-
   type            String         @default("Passenger") @db.VarChar(50)
   notes           String?        @db.Text
   createdAt       DateTime       @default(now())
@@ -234,10 +231,9 @@ model Aircraft {
   assignedAme     User?          @relation("AssignedAme", fields: [assignedAmeId], references: [id])
   createdBy       Int?
   creator         User?          @relation("AircraftCreator", fields: [createdBy], references: [id])
-
-  @@map("aircrafts")
   documents       Document[]
 
+  @@map("aircrafts")
 }
 
 model Squawk {
@@ -280,14 +276,16 @@ model Student {
   city        String?  @db.VarChar(100)
   state       String?  @db.VarChar(100)
   pincode     String?  @db.VarChar(10)
-  
+
   batch       String?  @db.VarChar(50)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   licenses    StudentLicense[]
   medicals    StudentMedical[]
   documents   StudentDocument[]
   account     StudentAccount?
+  invoices    Invoice[]
 
   @@map("students")
 }
@@ -363,66 +361,9 @@ model WeatherCheck {
   @@map("weather_checks")
 }
 
-
-// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-// Flying Slots / Sessions Models
-// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-
-model FlyingSlot {
-  id           Int        @id @default(autoincrement())
-  date         DateTime   @db.Date
-  startTime    String     @db.VarChar(5) // e.g. '08:00'
-  endTime      String     @db.VarChar(5) // e.g. '10:00'
-  status       SlotStatus @default(SCHEDULED)
-  aircraft     String     @db.VarChar(50)
-  notes        String?    @db.Text
-
-  studentId    Int
-  instructorId Int
-
-  student      User       @relation("StudentSessions", fields: [studentId], references: [id])
-  instructor   User       @relation("InstructorSessions", fields: [instructorId], references: [id])
-
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@map("flying_slots")
-}
-
-model SlotRequest {
-  id                   Int           @id @default(autoincrement())
-  date                 DateTime      @db.Date
-  timePreference       String        @db.VarChar(100)
-  instructorPreference String        @db.VarChar(100)
-  aircraftPreference   String        @db.VarChar(50)
-  notes                String?       @db.Text
-  status               RequestStatus @default(PENDING)
-
-  studentId            Int
-  student              User          @relation("StudentRequests", fields: [studentId], references: [id])
-
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
-
-  @@map("slot_requests")
-}
-
-enum SlotStatus {
-  SCHEDULED
-  COMPLETED
-  CANCELLED
-}
-
-enum RequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-
-// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ──────────────────────────────────────────────────────────────
 // DMS Models
-// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ──────────────────────────────────────────────────────────────
 
 model Document {
   id             Int               @id @default(autoincrement())
@@ -483,9 +424,9 @@ enum DocumentStatus {
   ARCHIVED
 }
 
-// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ──────────────────────────────────────────────────────────────
 // Courses & Pricing
-// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ──────────────────────────────────────────────────────────────
 
 enum CourseLevel {
   PPL
@@ -551,9 +492,9 @@ model PricingRate {
   @@map("pricing_rates")
 }
 
-// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ──────────────────────────────────────────────────────────────
 // Qualification Types & Records
-// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ──────────────────────────────────────────────────────────────
 
 model QualificationType {
   id          Int                   @id @default(autoincrement())
@@ -586,6 +527,61 @@ model QualificationRecord {
   @@index([studentId])
   @@index([instructorId])
   @@map("qualification_records")
+}
+
+// ──────────────────────────────────────────────────────────────
+// T3 Module — Invoices
+// ──────────────────────────────────────────────────────────────
+model Invoice {
+  id            Int           @id @default(autoincrement())
+  invoiceNumber String        @unique @db.VarChar(50)
+  studentId     Int
+  student       Student       @relation(fields: [studentId], references: [id])
+  issuedById    Int
+  issuedBy      User          @relation("IssuedByUser", fields: [issuedById], references: [id])
+  status        InvoiceStatus @default(PENDING)
+  dueDate       DateTime?
+  issuedDate    DateTime      @default(now())
+  notes         String?       @db.Text
+  amount        Decimal       @db.Decimal(10, 2) @default(0)
+  paidAmount    Decimal       @db.Decimal(10, 2) @default(0)
+  items         InvoiceItem[]
+  payments      Payment[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          Int     @id @default(autoincrement())
+  invoiceId   Int
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String  @db.VarChar(255)
+  quantity    Int     @default(1)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  totalPrice  Decimal @db.Decimal(10, 2)
+
+  @@map("invoice_items")
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount    Decimal  @db.Decimal(10, 2)
+  paidAt    DateTime @default(now())
+  method    String?  @db.VarChar(50)
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("payments")
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -642,5 +638,3 @@ enum RequestStatus {
   APPROVED
   REJECTED
 }
-
-
