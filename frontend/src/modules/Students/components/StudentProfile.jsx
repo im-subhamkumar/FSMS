@@ -6,6 +6,8 @@ import {
   Globe, CreditCard, BookOpen, ExternalLink, Badge
 } from "lucide-react";
 
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
+
 export default function StudentProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -18,7 +20,7 @@ export default function StudentProfile() {
 
   const fetchStudent = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/students/${id}`);
+      const res = await fetch(`${API_BASE}/students/${id}`);
       const data = await res.json();
       setStudent(data);
     } catch (err) {

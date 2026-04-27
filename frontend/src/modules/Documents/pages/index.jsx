@@ -124,7 +124,7 @@ export default function DocumentsRoot() {
                     {filteredDocuments.map(doc => {
                         const currentVersion = doc.versions?.[0] || {};
                         const fileUrl = currentVersion.fileUrl 
-                            ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'}/uploads/${currentVersion.fileUrl}`
+                            ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || `http://${window.location.hostname}:3000`}/uploads/${currentVersion.fileUrl}`
                             : '#';
                         
                         return (

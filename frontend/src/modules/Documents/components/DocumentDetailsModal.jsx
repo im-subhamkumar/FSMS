@@ -100,7 +100,7 @@ export const DocumentDetailsModal = ({ isOpen, onClose, document, onUploadNewVer
                             ) : (
                                 documentVersions.map((version, index) => {
                                     const isLatest = index === 0;
-                                    const fileUrl = `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'}/uploads/${version.fileUrl}`;
+                                    const fileUrl = `${import.meta.env.VITE_API_URL?.replace('/api', '') || `http://${window.location.hostname}:3000`}/uploads/${version.fileUrl}`;
                                     
                                     return (
                                         <div 

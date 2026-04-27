@@ -9,7 +9,7 @@ export default function ExpandedTableView({ type }) {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+        const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
         const endpoint = type === 'fleet' ? '/maintenance/aircraft' : '/maintenance/assigned-repairs';
         const res = await fetch(`${API_URL}${endpoint}`);
         const result = await res.json();

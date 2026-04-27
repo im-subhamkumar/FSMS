@@ -45,6 +45,8 @@ const InputField = ({ label, name, type = "text", required, fullWidth, value, on
   </div>
 );
 
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
+
 export default function StudentForm() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -78,7 +80,7 @@ export default function StudentForm() {
 
   const loadStudent = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/students/${id}`);
+      const res = await fetch(`${API_BASE}/students/${id}`);
       const data = await res.json();
 
       setForm(prev => ({
@@ -120,8 +122,8 @@ export default function StudentForm() {
     setIsSubmitting(true);
 
     const url = isEdit
-      ? `http://localhost:3000/api/students/${id}`
-      : `http://localhost:3000/api/students`;
+      ? `${API_BASE}/students/${id}`
+      : `${API_BASE}/students`;
 
     const method = isEdit ? "PUT" : "POST";
 
@@ -146,7 +148,7 @@ export default function StudentForm() {
           fd.append('file', pf.file);
           fd.append('documentType', pf.type || 'General');
           try {
-            const upRes = await fetch(`http://localhost:3000/api/students/${newStudentId}/documents`, {
+            const upRes = await fetch(`${API_BASE}/students/${newStudentId}/documents`, {
               method: 'POST',
               body: fd
             });
@@ -314,7 +316,7 @@ export default function StudentForm() {
                         <FileText className="text-indigo-500" size={24} />
                         <div>
                           <p className="text-sm font-semibold text-slate-900 dark:text-white">{doc.documentType || 'Document'} <span className="text-xs font-normal text-slate-500 ml-2">Stored File</span></p>
-                          <a href={doc.fileUrl.startsWith('http') ? doc.fileUrl : `http://localhost:3000${doc.fileUrl}`} target="_blank" rel="noreferrer" className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 group-hover:underline">View Original File</a>
+                          <a href={doc.fileUrl.startsWith('http') ? doc.fileUrl : `http://${window.location.hostname}:3000${doc.fileUrl}`} target="_blank" rel="noreferrer" className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 group-hover:underline">View Original File</a>
                         </div>
                       </div>
                       {isEdit && (
@@ -323,7 +325,7 @@ export default function StudentForm() {
                           onClick={async () => {
                             if (!window.confirm("Permanently delete this document?")) return;
                             try {
-                              await fetch(`http://localhost:3000/api/students/${id}/documents/${doc.id}`, { method: 'DELETE' });
+                              await fetch(`${API_BASE}/students/${id}/documents/${doc.id}`, { method: 'DELETE' });
                               setForm(prev => ({ ...prev, documents: prev.documents.filter(d => d.id !== doc.id) }));
                             } catch (e) {
                               console.error(e);

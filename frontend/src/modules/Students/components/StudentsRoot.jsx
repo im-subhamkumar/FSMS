@@ -5,43 +5,45 @@ import {
   FileBadge, ShieldCheck, ChevronLeft, ChevronRight, BookOpen
 } from "lucide-react";
 
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
+
 export default function StudentsRoot() {
-  const navigate = useNavigate();
+    const navigate = useNavigate();
 
-  const [students, setStudents] = useState([]);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [selectedBatch, setSelectedBatch] = useState(null);
+    const [students, setStudents] = useState([]);
+    const [search, setSearch] = useState("");
+    const [page, setPage] = useState(1);
+    const [selectedBatch, setSelectedBatch] = useState(null);
 
-  const perPage = 10;
+    const perPage = 10;
 
-  const fetchStudents = useCallback(async () => {
-    try {
-      const res = await fetch("http://localhost:3000/api/students");
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setStudents(data);
-      } else {
-        console.error("Failed to fetch students. API returned:", data);
-        setStudents([]); // Fallback to empty array to prevent .filter crash
-      }
-    } catch (err) {
-      console.error("Network error fetching students:", err);
-      setStudents([]); // Fallback to empty array
-    }
-  }, []);
+    const fetchStudents = useCallback(async () => {
+        try {
+            const res = await fetch(`${API_BASE}/students`);
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setStudents(data);
+            } else {
+                console.error("Failed to fetch students. API returned:", data);
+                setStudents([]); // Fallback to empty array to prevent .filter crash
+            }
+        } catch (err) {
+            console.error("Network error fetching students:", err);
+            setStudents([]); // Fallback to empty array
+        }
+    }, []);
 
-  useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+    useEffect(() => {
+        fetchStudents();
+    }, [fetchStudents]);
 
-  const deleteStudent = async (id) => {
-    if (!window.confirm("Delete student?")) return;
+    const deleteStudent = async (id) => {
+        if (!window.confirm("Delete student?")) return;
 
-    try {
-      const res = await fetch(`http://localhost:3000/api/students/${id}`, {
-        method: "DELETE"
-      });
+        try {
+            const res = await fetch(`${API_BASE}/students/${id}`, {
+                method: "DELETE"
+            });
 
       const data = await res.json();
 
