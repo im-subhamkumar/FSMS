@@ -9,33 +9,35 @@ datasource db {
 }
 
 model User {
-  id         Int         @id @default(autoincrement())
-  email      String      @unique @db.VarChar(255)
-  password   String      @db.VarChar(255)
-  firstName  String      @db.VarChar(100)
-  lastName   String      @db.VarChar(100)
-  role       Role        @default(STUDENT)
-  isActive   Boolean     @default(true)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  firstName String   @db.VarChar(100)
+  lastName  String   @db.VarChar(100)
+  role      Role     @default(STUDENT)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   instructor Instructor?
 
-  studentDocuments    Document[] @relation("StudentDocs")
-  instructorDocuments Document[] @relation("InstructorDocs")
-  assignedAircraft Aircraft[] @relation("AssignedAme")
-  createdAircraft  Aircraft[] @relation("AircraftCreator")
-  reportedSquawks  Squawk[]   @relation("SquawkReporter")
-  activities       MaintenanceActivity[] @relation("ActivityUser")
-  createdCourses   Course[]   @relation("CourseCreator")
-  createdPricing   PricingRate[] @relation("PricingCreator")
-  
-  // Relations for Flying Slots module
-  sessionsAsStudent     FlyingSlot[]  @relation("StudentSessions")
-  sessionsAsInstructor  FlyingSlot[]  @relation("InstructorSessions")
-  requestsAsStudent     SlotRequest[] @relation("StudentRequests")
+  // Relations for Flying Slots
+  sessionsAsStudent    FlyingSlot[]  @relation("StudentSessions")
+  sessionsAsInstructor FlyingSlot[]  @relation("InstructorSessions")
+  requestsAsStudent    SlotRequest[] @relation("StudentRequests")
+
+  // Documents and other relations
+  studentDocuments    Document[]            @relation("StudentDocs")
+  instructorDocuments Document[]            @relation("InstructorDocs")
+  assignedAircraft    Aircraft[]            @relation("AssignedAme")
+  createdAircraft     Aircraft[]            @relation("AircraftCreator")
+  reportedSquawks     Squawk[]              @relation("SquawkReporter")
+  activities          MaintenanceActivity[] @relation("ActivityUser")
+  createdCourses      Course[]              @relation("CourseCreator")
+  createdPricing      PricingRate[]         @relation("PricingCreator")
 
   // T3 — Invoice relations
-  invoicesIssued   Invoice[]     @relation("IssuedByUser")
+  invoicesIssued Invoice[] @relation("IssuedByUser")
 
   @@map("users")
 }
@@ -153,6 +155,60 @@ enum Role {
   STAFF
 }
 
+// ──────────────────────────────────────────────────────────────
+// Flying Slots / Sessions Models
+// ──────────────────────────────────────────────────────────────
+
+model FlyingSlot {
+  id           Int        @id @default(autoincrement())
+  date         DateTime   @db.Date
+  startTime    String     @db.VarChar(5) // e.g. '08:00'
+  endTime      String     @db.VarChar(5) // e.g. '10:00'
+  status       SlotStatus @default(SCHEDULED)
+  aircraft     String     @db.VarChar(50)
+  notes        String?    @db.Text
+
+  studentId    Int
+  instructorId Int
+
+  student    User @relation("StudentSessions", fields: [studentId], references: [id])
+  instructor User @relation("InstructorSessions", fields: [instructorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("flying_slots")
+}
+
+model SlotRequest {
+  id                   Int           @id @default(autoincrement())
+  date                 DateTime      @db.Date
+  timePreference       String        @db.VarChar(100)
+  instructorPreference String        @db.VarChar(100)
+  aircraftPreference   String        @db.VarChar(50)
+  notes                String?       @db.Text
+  status               RequestStatus @default(PENDING)
+
+  studentId Int
+  student   User @relation("StudentRequests", fields: [studentId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("slot_requests")
+}
+
+enum SlotStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
 
 enum InstructorDesignation {
   CHIEF_FLIGHT_INSTRUCTOR
@@ -201,37 +257,37 @@ enum AircraftStatus {
 
 // ── Aircraft model — owned by Aircraft team, extended by Maintenance ──
 model Aircraft {
-  id              String         @id @db.VarChar(50)
-  tailNumber      String         @db.VarChar(50)
-  name            String         @db.VarChar(100)
-  manufacturer    String?        @db.VarChar(100)
-  model           String         @db.VarChar(100)
-  serialNumber    String?        @db.VarChar(100)
-  yearOfManufacture Int?
-  cruisingRange   Int?           @default(0)
-  mtow            Int?           @default(0)
-  emptyWeight     Int?           @default(0)
-  fuelCapacity    Int?           @default(0)
-  capacity        Int?           @default(0)
-  lastMaintenance DateTime?      @db.Date
-  maintenanceSchedule String?      @db.VarChar(100)
-  totalFlightHours Float?         @default(0)
-  maintenanceStatus String?        @db.VarChar(50)
-  insuranceExpiryDate DateTime?    @db.Date
-  status          String         @default("Active") @db.VarChar(50)
-  availability    String         @default("Available") @db.VarChar(50)
-  type            String         @default("Passenger") @db.VarChar(50)
-  notes           String?        @db.Text
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id                  String    @id @db.VarChar(50)
+  tailNumber          String    @db.VarChar(50)
+  name                String    @db.VarChar(100)
+  manufacturer        String?   @db.VarChar(100)
+  model               String    @db.VarChar(100)
+  serialNumber        String?   @db.VarChar(100)
+  yearOfManufacture   Int?
+  cruisingRange       Int?      @default(0)
+  mtow                Int?      @default(0)
+  emptyWeight         Int?      @default(0)
+  fuelCapacity        Int?      @default(0)
+  capacity            Int?      @default(0)
+  lastMaintenance     DateTime? @db.Date
+  maintenanceSchedule String?   @db.VarChar(100)
+  totalFlightHours    Float?    @default(0)
+  maintenanceStatus   String?   @db.VarChar(50)
+  insuranceExpiryDate DateTime? @db.Date
+  status              String    @default("Active") @db.VarChar(50)
+  availability        String    @default("Available") @db.VarChar(50)
+  type                String    @default("Passenger") @db.VarChar(50)
+  notes               String?   @db.Text
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   // Maintenance module relations
-  squawks         Squawk[]
-  assignedAmeId   Int?
-  assignedAme     User?          @relation("AssignedAme", fields: [assignedAmeId], references: [id])
-  createdBy       Int?
-  creator         User?          @relation("AircraftCreator", fields: [createdBy], references: [id])
-  documents       Document[]
+  squawks       Squawk[]
+  assignedAmeId Int?
+  assignedAme   User?      @relation("AssignedAme", fields: [assignedAmeId], references: [id])
+  createdBy     Int?
+  creator       User?      @relation("AircraftCreator", fields: [createdBy], references: [id])
+  documents     Document[]
 
   @@map("aircrafts")
 }
@@ -277,15 +333,15 @@ model Student {
   state       String?  @db.VarChar(100)
   pincode     String?  @db.VarChar(10)
 
-  batch       String?  @db.VarChar(50)
+  batch String? @db.VarChar(50)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  licenses    StudentLicense[]
-  medicals    StudentMedical[]
-  documents   StudentDocument[]
-  account     StudentAccount?
-  invoices    Invoice[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  licenses  StudentLicense[]
+  medicals  StudentMedical[]
+  documents StudentDocument[]
+  account   StudentAccount?
+  invoices  Invoice[]
 
   @@map("students")
 }
@@ -298,7 +354,7 @@ model StudentLicense {
   issueDate     DateTime
   expiryDate    DateTime
   createdAt     DateTime @default(now())
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_licenses")
 }
@@ -310,7 +366,7 @@ model StudentMedical {
   issueDate                DateTime
   expiryDate               DateTime
   createdAt                DateTime @default(now())
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student                  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_medicals")
 }
@@ -321,7 +377,7 @@ model StudentDocument {
   documentType String   @db.VarChar(100)
   fileUrl      String   @db.VarChar(255)
   uploadedAt   DateTime @default(now())
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_documents")
 }
@@ -332,7 +388,7 @@ model StudentAccount {
   schoolEmail  String   @unique @db.VarChar(255)
   passwordHash String   @db.VarChar(255)
   createdAt    DateTime @default(now())
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("student_accounts")
 }
@@ -366,25 +422,25 @@ model WeatherCheck {
 // ──────────────────────────────────────────────────────────────
 
 model Document {
-  id             Int               @id @default(autoincrement())
-  title          String            @db.VarChar(255)
-  categoryId     Int
-  category       DocumentCategory  @relation(fields: [categoryId], references: [id])
-  status         DocumentStatus    @default(ACTIVE)
-  
+  id         Int              @id @default(autoincrement())
+  title      String           @db.VarChar(255)
+  categoryId Int
+  category   DocumentCategory @relation(fields: [categoryId], references: [id])
+  status     DocumentStatus   @default(ACTIVE)
+
   // Relations to track who/what the document belongs to
-  studentId      Int?
-  instructorId   Int?
-  aircraftId     String?           @db.VarChar(50)
+  studentId    Int?
+  instructorId Int?
+  aircraftId   String? @db.VarChar(50)
 
-  student        User?             @relation("StudentDocs", fields: [studentId], references: [id])
-  instructor     User?             @relation("InstructorDocs", fields: [instructorId], references: [id])
-  aircraft       Aircraft?         @relation(fields: [aircraftId], references: [id])
+  student    User?     @relation("StudentDocs", fields: [studentId], references: [id])
+  instructor User?     @relation("InstructorDocs", fields: [instructorId], references: [id])
+  aircraft   Aircraft? @relation(fields: [aircraftId], references: [id])
 
-  expiryDate     DateTime?
-  versions       DocumentVersion[]
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  expiryDate DateTime?
+  versions   DocumentVersion[]
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 
   @@map("documents")
 }
@@ -584,76 +640,21 @@ enum InvoiceStatus {
   OVERDUE
 }
 
-// ──────────────────────────────────────────────────────────────
-// Flying Slots / Sessions Models
-// ──────────────────────────────────────────────────────────────
-
-model FlyingSlot {
-  id           Int        @id @default(autoincrement())
-  date         DateTime   @db.Date
-  startTime    String     @db.VarChar(5) // e.g. '08:00'
-  endTime      String     @db.VarChar(5) // e.g. '10:00'
-  status       SlotStatus @default(SCHEDULED)
-  aircraft     String     @db.VarChar(50)
-  notes        String?    @db.Text
-
-  studentId    Int
-  instructorId Int
-
-  student      User       @relation("StudentSessions", fields: [studentId], references: [id])
-  instructor   User       @relation("InstructorSessions", fields: [instructorId], references: [id])
-
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@map("flying_slots")
-}
-
-model SlotRequest {
-  id                   Int           @id @default(autoincrement())
-  date                 DateTime      @db.Date
-  timePreference       String        @db.VarChar(100)
-  instructorPreference String        @db.VarChar(100)
-  aircraftPreference   String        @db.VarChar(50)
-  notes                String?       @db.Text
-  status               RequestStatus @default(PENDING)
-
-  studentId            Int
-  student              User          @relation("StudentRequests", fields: [studentId], references: [id])
-
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
-
-  @@map("slot_requests")
-}
-
-enum SlotStatus {
-  SCHEDULED
-  COMPLETED
-  CANCELLED
-}
-
-enum RequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 model Schedule {
-  id                 Int      @id @default(autoincrement())
-  traineeId          Int
-  traineeName        String?  @db.VarChar(200)
-  instructorId       Int
-  instructorName     String?  @db.VarChar(200)
-  aircraftId         String   @db.VarChar(50)
-  startTime          DateTime
-  endTime            DateTime
-  status             String   @default("SCHEDULED") // SCHEDULED, CANCELLED, COMPLETED
-  cancellationReason String?  @db.Text
-  weatherVerdict     String?  @db.VarChar(50) // GO, NO-GO
-  extremeWeatherWarning String? @db.Text
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                    Int      @id @default(autoincrement())
+  traineeId             Int
+  traineeName           String?  @db.VarChar(200)
+  instructorId          Int
+  instructorName        String?  @db.VarChar(200)
+  aircraftId            String   @db.VarChar(50)
+  startTime             DateTime
+  endTime               DateTime
+  status                String   @default("SCHEDULED") // SCHEDULED, CANCELLED, COMPLETED
+  cancellationReason    String?  @db.Text
+  weatherVerdict        String?  @db.VarChar(50) // GO, NO-GO
+  extremeWeatherWarning String?  @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@map("schedules")
 }

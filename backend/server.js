@@ -81,6 +81,8 @@ app.get('/', (req, res) => {
 });
 
 // ──────────────────────────────────────────
+// Mount team module routers below
+// ──────────────────────────────────────────
 // Team Module Routers
 // ──────────────────────────────────────────
 import studentsRouter from './routes/students.js';
