@@ -1,4 +1,24 @@
 import React, { useState, useEffect } from 'react';
+import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
+import { enUS } from 'date-fns/locale';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+
+const locales = {
+  'en-US': enUS,
+}
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+});
+
+const DnDCalendar = withDragAndDrop(Calendar);
 
 const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
@@ -11,6 +31,7 @@ export default function FlyingSlotsRoot() {
         instructor: '', instructorId: '',
         student: '', traineeId: '',
         aircraft: '', aircraftId: '',
+        flightType: 'Dual',
         status: 'Scheduled' 
     });
     const [editId, setEditId] = useState(null);
@@ -92,14 +113,22 @@ export default function FlyingSlotsRoot() {
                 const mappedSlots = data.map(s => {
                     const startDate = new Date(s.startTime);
                     const endDate = new Date(s.endTime);
+                    
+                    const localDate = `${startDate.getFullYear()}-${(startDate.getMonth()+1).toString().padStart(2,'0')}-${startDate.getDate().toString().padStart(2,'0')}`;
+                    const localStartTime = `${startDate.getHours().toString().padStart(2,'0')}:${startDate.getMinutes().toString().padStart(2,'0')}`;
+                    const localEndTime = `${endDate.getHours().toString().padStart(2,'0')}:${endDate.getMinutes().toString().padStart(2,'0')}`;
+
                     return {
                         id: s.id,
-                        date: startDate.toISOString().split('T')[0],
-                        startTime: startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
-                        endTime: endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+                        date: localDate,
+                        startTime: localStartTime,
+                        endTime: localEndTime,
                         student: s.traineeName || `Trainee #${s.traineeId}`,
+                        traineeId: s.traineeId,
                         instructor: s.instructorName || `Instructor #${s.instructorId}`,
+                        instructorId: s.instructorId,
                         aircraft: s.aircraftId,
+                        flightType: s.flightType || 'Dual',
                         status: s.status === 'SCHEDULED' ? 'Scheduled' : s.status === 'CANCELLED' ? 'Cancelled' : s.status,
                         // Attach weather data for display in lists
                         weatherVerdict: s.weatherVerdict,
@@ -122,7 +151,7 @@ export default function FlyingSlotsRoot() {
             setEditId(slot.id);
         } else {
             // Default new slot to selected date if in calendar mode
-            setFormData({ date: viewMode === 'calendar' ? selectedDate : '', startTime: '', endTime: '', instructor: '', student: '', aircraft: '', status: 'Scheduled' });
+            setFormData({ date: viewMode === 'calendar' ? selectedDate : '', startTime: '', endTime: '', instructor: '', student: '', aircraft: '', flightType: 'Dual', status: 'Scheduled' });
             setEditId(null);
         }
         setIsModalOpen(true);
@@ -154,6 +183,7 @@ export default function FlyingSlotsRoot() {
                 instructorId: formData.instructorId,
                 instructorName: formData.instructor,
                 aircraftId: formData.aircraft,
+                flightType: formData.flightType,
                 startTime: startISO,
                 endTime: endISO
             };
@@ -164,19 +194,36 @@ export default function FlyingSlotsRoot() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if (response.ok) fetchSlots();
+                if (response.ok) {
+                    fetchSlots();
+                    setTimeout(fetchSlots, 3000);
+                    setTimeout(fetchSlots, 8000);
+                    handleCloseModal();
+                } else {
+                    const errData = await response.json();
+                    alert(errData.error || 'Failed to update slot');
+                }
             } else {
                 const response = await fetch(`${API_BASE}/schedules`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if (response.ok) fetchSlots();
+                if (response.ok) {
+                    fetchSlots();
+                    // Poll again after 3 seconds to catch the background weather check update
+                    setTimeout(fetchSlots, 3000);
+                    setTimeout(fetchSlots, 8000);
+                    handleCloseModal();
+                } else {
+                    const errData = await response.json();
+                    alert(errData.error || 'Failed to save slot');
+                }
             }
         } catch (error) {
             console.error('Error saving slot:', error);
+            alert('An unexpected error occurred while saving the slot.');
         }
-        handleCloseModal();
     };
 
     const getStatusStyles = (status) => {
@@ -194,6 +241,41 @@ export default function FlyingSlotsRoot() {
         slot.instructor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         slot.aircraft.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const handleEventUpdate = async ({ event, start, end }) => {
+        try {
+            const startISO = new Date(start).toISOString();
+            const endISO = new Date(end).toISOString();
+            
+            const payload = {
+                traineeId: event.traineeId,
+                traineeName: event.student,
+                instructorId: event.instructorId,
+                instructorName: event.instructor,
+                aircraftId: event.aircraft,
+                flightType: event.flightType,
+                startTime: startISO,
+                endTime: endISO
+            };
+
+            const response = await fetch(`${API_BASE}/schedules/${event.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                fetchSlots();
+                setTimeout(fetchSlots, 3000);
+            } else {
+                const errData = await response.json();
+                alert(errData.error || 'Failed to update slot timings.');
+            }
+        } catch (err) {
+            console.error('Drag/Drop Error:', err);
+            alert('An unexpected error occurred while updating the slot.');
+        }
+    };
 
     const renderList = () => (
         <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 flex flex-col">
@@ -233,7 +315,8 @@ export default function FlyingSlotsRoot() {
                                         {slot.instructor}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                                        {slot.aircraft}
+                                        <div>{slot.aircraft}</div>
+                                        <div className="mt-1 text-xs text-gray-500 font-semibold">{slot.flightType}</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusStyles(slot.status)}`}>
@@ -262,90 +345,151 @@ export default function FlyingSlotsRoot() {
     );
 
     const renderCalendar = () => {
-        // Daily timeline from 06:00 to 20:00
-        const hours = Array.from({length: 15}, (_, i) => i + 6);
-        const dailySlots = slots.filter(s => s.date === selectedDate).sort((a,b) => a.startTime.localeCompare(b.startTime));
+        const events = slots.map(slot => {
+            const startStr = `${slot.date}T${slot.startTime}:00`;
+            const endStr = slot.endTime ? `${slot.date}T${slot.endTime}:00` : `${slot.date}T${slot.startTime}:00`;
+            
+            return {
+                ...slot,
+                start: new Date(startStr),
+                end: new Date(endStr),
+                title: `${slot.student} w/ ${slot.instructor}`
+            };
+        });
+
+        const CustomEvent = ({ event }) => (
+            <div className="flex flex-col h-full text-xs p-1" title={event.title}>
+                <div className="font-bold flex items-center justify-between">
+                    <span className="truncate">{event.student.split(' ')[0]} / {event.instructor.split(' ')[0]}</span>
+                    <span className="text-[9px] uppercase bg-black/10 px-1 rounded flex-shrink-0 ml-1">{event.flightType}</span>
+                </div>
+                <div className="flex justify-between mt-1 items-center">
+                    <span className="font-mono text-[10px]">{event.aircraft}</span>
+                    <span className={`px-1 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ${
+                        event.status === 'Completed' ? 'bg-green-500 text-white' : 
+                        event.status === 'Cancelled' ? 'bg-red-500 text-white' : 
+                        'bg-white/20 text-white'
+                    }`}>{event.status}</span>
+                </div>
+                {event.weatherVerdict && (
+                    <div className={`mt-1 text-[9px] font-bold uppercase inline-block px-1 rounded w-fit ${
+                        event.weatherVerdict === 'GO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                        Wx: {event.weatherVerdict}
+                    </div>
+                )}
+            </div>
+        );
+
+        const CustomTimeSlot = ({ children }) => {
+            return React.cloneElement(children, {
+                className: `${children.props.className || ''} group relative cursor-pointer`,
+                children: (
+                    <>
+                        {children.props.children}
+                        <div className="custom-add-slot-btn absolute inset-0 flex items-center justify-center pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity z-10">
+                            <span className="text-[9px] font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded border border-green-100 dark:border-green-800/50">
+                                + Add Slot
+                            </span>
+                        </div>
+                    </>
+                )
+            });
+        };
 
         return (
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 flex flex-col p-4 sm:p-6 overflow-hidden">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Daily Timeline</h2>
-                    <input 
-                        type="date" 
-                        value={selectedDate} 
-                        onChange={(e) => setSelectedDate(e.target.value)} 
-                        className="border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white py-2 px-3 border" 
-                    />
-                </div>
-                
-                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                    <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-16 pl-6 space-y-0 pb-12">
-                        {hours.map(hour => {
-                            const timeStr = `${hour.toString().padStart(2, '0')}:00`;
-                            
-                            // Get slots that START in this hour
-                            const startingHere = dailySlots.filter(s => parseInt(s.startTime.split(':')[0]) === hour);
-                            
-                            // Check if this hour is free by making sure NO slot spans across this hour
-                            const isActiveOccupied = dailySlots.some(s => {
-                                const startH = parseInt(s.startTime.split(':')[0]);
-                                const endH = s.endTime ? parseInt(s.endTime.split(':')[0]) : startH + 1;
-                                return hour >= startH && hour < endH;
-                            });
-
-                            return (
-                                <div key={hour} className="relative py-4 border-t border-dashed border-gray-100 dark:border-gray-700/50">
-                                    {/* Time Marker */}
-                                    <div className="absolute -left-[5.5rem] top-3 w-16 text-right text-sm font-bold text-gray-500 dark:text-gray-400">
-                                        {timeStr}
-                                    </div>
-                                    
-                                    {/* Timeline Dot */}
-                                    <div className={`absolute -left-[1.65rem] top-4 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-800 ${isActiveOccupied ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
-
-                                    {/* Content Area */}
-                                    <div className="min-h-[2.5rem] flex flex-col gap-3">
-                                        {!isActiveOccupied && (
-                                            <div className="text-sm text-green-600 dark:text-green-400/80 font-medium italic opacity-70 py-1 hover:opacity-100 transition-opacity flex items-center gap-2 cursor-pointer" onClick={() => {
-                                                setFormData({ ...formData, date: selectedDate, startTime: timeStr, endTime: `${(hour+2).toString().padStart(2, '0')}:00` });
-                                                setEditId(null);
-                                                setIsModalOpen(true);
-                                            }}>
-                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-                                                Timeslot available
-                                            </div>
-                                        )}
-
-                                        {startingHere.map(slot => (
-                                            <div key={slot.id} onClick={() => handleOpenModal(slot)} className={`p-4 rounded-xl cursor-pointer border shadow-sm ${slot.status === 'Completed' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : slot.status === 'Cancelled' ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'} transition-all hover:scale-[1.01] hover:shadow-md relative overflow-hidden`}>
-                                                <div className={`absolute top-0 left-0 w-1.5 h-full ${slot.status === 'Completed' ? 'bg-green-500' : slot.status === 'Cancelled' ? 'bg-red-500' : 'bg-blue-500'}`}></div>
-                                                <div className="flex justify-between items-start pl-2">
-                                                    <div>
-                                                        <div className="font-bold text-gray-900 dark:text-white text-base mb-1">{slot.startTime} &rarr; {slot.endTime}</div>
-                                                        <div className="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                                                            <div className="h-6 w-6 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center text-xs">{slot.student.charAt(0)}</div>
-                                                            {slot.student} <span className="text-gray-400 mx-1">with</span> {slot.instructor}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-mono bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">{slot.aircraft}</div>
-                                                        
-                                                        {slot.weatherVerdict && (
-                                                            <div className={`ml-2 text-[10px] font-bold uppercase inline-flex items-center px-1.5 py-0.5 rounded-md ${slot.weatherVerdict === 'GO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                                Weather: {slot.weatherVerdict}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-bold border ${getStatusStyles(slot.status)}`}>
-                                                        {slot.status}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4 sm:p-6 h-full min-h-[600px] flex flex-col">
+                <style>{`
+                  .rbc-calendar {
+                    min-height: 500px;
+                    flex: 1;
+                    font-family: inherit;
+                  }
+                  .rbc-toolbar button {
+                    color: inherit;
+                  }
+                  .rbc-toolbar button.rbc-active {
+                    background-color: #e5e7eb;
+                    color: #111827;
+                  }
+                  .dark .rbc-toolbar button.rbc-active {
+                    background-color: #374151;
+                    color: #f9fafb;
+                  }
+                  .dark .rbc-month-view, .dark .rbc-time-view, .dark .rbc-header, .dark .rbc-day-bg, .dark .rbc-timeslot-group, .dark .rbc-time-content {
+                    border-color: #374151;
+                  }
+                  .dark .rbc-off-range-bg {
+                    background-color: #1f2937;
+                  }
+                  .dark .rbc-today {
+                    background-color: #111827;
+                  }
+                  .rbc-time-gutter .custom-add-slot-btn {
+                    display: none !important;
+                  }
+                `}</style>
+                <DnDCalendar
+                    localizer={localizer}
+                    events={events}
+                    startAccessor="start"
+                    endAccessor="end"
+                    views={['month', 'week', 'day']}
+                    defaultView="week"
+                    step={30}
+                    timeslots={2}
+                    date={new Date(selectedDate)}
+                    onEventDrop={handleEventUpdate}
+                    onEventResize={handleEventUpdate}
+                    resizable
+                    onNavigate={(newDate) => {
+                        const tzOffset = newDate.getTimezoneOffset() * 60000;
+                        const localISOTime = (new Date(newDate - tzOffset)).toISOString().slice(0, -1);
+                        setSelectedDate(localISOTime.split('T')[0]);
+                    }}
+                    selectable
+                    onSelectSlot={(slotInfo) => {
+                        const startDate = slotInfo.start;
+                        const endDate = slotInfo.end;
+                        
+                        const tzOffset = startDate.getTimezoneOffset() * 60000;
+                        const localISOStart = (new Date(startDate - tzOffset)).toISOString().slice(0, -1);
+                        const localISOEnd = (new Date(endDate - tzOffset)).toISOString().slice(0, -1);
+                        
+                        const dateStr = localISOStart.split('T')[0];
+                        const timeStr = localISOStart.split('T')[1].substring(0, 5);
+                        const endTimeStr = localISOEnd.split('T')[1].substring(0, 5);
+                        
+                        setFormData({ 
+                            ...formData, 
+                            date: dateStr, 
+                            startTime: timeStr, 
+                            endTime: endTimeStr 
+                        });
+                        setEditId(null);
+                        setIsModalOpen(true);
+                    }}
+                    onSelectEvent={(event) => handleOpenModal(event)}
+                    components={{
+                        event: CustomEvent,
+                        timeSlotWrapper: CustomTimeSlot
+                    }}
+                    eventPropGetter={(event) => {
+                        let bgColor = '#3b82f6';
+                        if (event.status === 'Completed') bgColor = '#22c55e';
+                        if (event.status === 'Cancelled') bgColor = '#ef4444';
+                        return {
+                            style: {
+                                backgroundColor: bgColor,
+                                border: 'none',
+                                borderRadius: '6px',
+                                color: 'white',
+                                padding: '0',
+                                overflow: 'hidden'
+                            }
+                        };
+                    }}
+                />
             </div>
         );
     };
@@ -538,7 +682,7 @@ export default function FlyingSlotsRoot() {
                                                     ))}
                                                 </select>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-5">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                                                 <div>
                                                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Aircraft *</label>
                                                     <select 
@@ -552,6 +696,13 @@ export default function FlyingSlotsRoot() {
                                                         {aircraftList.map(a => (
                                                             <option key={a.id} value={a.id}>{a.tailNumber || a.id} - {a.model}</option>
                                                         ))}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Flight Type</label>
+                                                    <select name="flightType" value={formData.flightType} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border">
+                                                        <option value="Dual">Dual</option>
+                                                        <option value="Solo">Solo</option>
                                                     </select>
                                                 </div>
                                                 <div>

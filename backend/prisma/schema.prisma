@@ -646,6 +646,7 @@ model Schedule {
   instructorId       Int
   instructorName     String?  @db.VarChar(200)
   aircraftId         String   @db.VarChar(50)
+  flightType         String   @default("Dual") @db.VarChar(50)
   startTime          DateTime
   endTime            DateTime
   status             String   @default("SCHEDULED") // SCHEDULED, CANCELLED, COMPLETED

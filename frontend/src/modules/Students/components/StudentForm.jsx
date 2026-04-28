@@ -70,11 +70,36 @@ export default function StudentForm() {
     { num: 5, title: "Documents", icon: FileText }
   ];
 
-  useEffect(() => {
-    if (isEdit) {
-      loadStudent();
+  const loadNextId = async () => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/students`);
+      const students = await res.json();
+      
+      let nextNumber = 1;
+      if (Array.isArray(students) && students.length > 0) {
+        const highestNumber = students.reduce((max, s) => {
+          if (!s.studentId) return max;
+          const parts = s.studentId.split('-');
+          if (parts.length === 3) {
+             const num = parseInt(parts[2], 10);
+             return !isNaN(num) && num > max ? num : max;
+          }
+          return max;
+        }, 0);
+        nextNumber = highestNumber + 1;
+      }
+      
+      const nextId = `fsms-stu-${String(nextNumber).padStart(4, "0")}`;
+
+      setForm(prev => ({
+        ...prev,
+        schoolEmail: `${nextId}@flightschool.com`,
+        passwordHash: '123456'
+      }));
+    } catch (error) {
+      console.error("Failed to load next ID:", error);
     }
-  }, [id, isEdit, loadStudent]);
+  };
 
   const loadStudent = useCallback(async () => {
     try {
@@ -98,6 +123,14 @@ export default function StudentForm() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (isEdit) {
+      loadStudent();
+    } else {
+      loadNextId();
+    }
+  }, [id, isEdit, loadStudent]);
+
   const handleChange = (e) => {
     setForm({
       ...form,
@@ -105,8 +138,39 @@ export default function StudentForm() {
     });
   };
 
+  const validateStep = (currentStep) => {
+    switch (currentStep) {
+      case 1:
+        return !!(form.firstName && form.lastName && form.email && form.dob && form.gender && form.nationality && form.phone && form.address && form.city && form.state && form.pincode);
+      case 2:
+        return !!(form.licenseNumber && form.licenseType && form.licenseIssueDate && form.licenseExpiryDate);
+      case 3:
+        return !!(form.medicalCertificateNumber && form.medicalIssueDate && form.medicalExpiryDate);
+      case 4:
+        return !!(form.schoolEmail && form.passwordHash);
+      case 5:
+        if (!form.documents || form.documents.length === 0) return false;
+        return form.documents.every(doc => doc.documentType && doc.fileUrl);
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = (e) => {
+    e.preventDefault();
+    if (validateStep(step)) {
+      setStep(s => s + 1);
+    } else {
+      alert("Please fill all fields in this section before proceeding.");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateStep(5)) {
+      alert("Please ensure at least one document is added and all document fields are filled.");
+      return;
+    }
     setIsSubmitting(true);
 
     const url = isEdit
@@ -331,7 +395,7 @@ export default function StudentForm() {
             {step < 5 ? (
               <button
                 type="button"
-                onClick={(e) => { e.preventDefault(); setStep(s => s + 1); }}
+                onClick={handleNext}
                 className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/20"
               >
                 Next Step <ChevronRight size={18} />

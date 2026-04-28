@@ -49,6 +49,20 @@ router.get("/", async (req, res) => {
 
 /*
 ---------------------------------------------------
+GET next student ID
+---------------------------------------------------
+*/
+router.get("/next-id", async (req, res) => {
+  try {
+    const nextId = await generateStudentId();
+    res.json({ nextId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/*
+---------------------------------------------------
 GET single student
 ---------------------------------------------------
 */
@@ -153,8 +167,8 @@ router.post("/", async (req, res) => {
       await tx.studentAccount.create({
         data: {
           studentId: student.id,
-          schoolEmail,
-          passwordHash
+          schoolEmail: schoolEmail || `${studentId.toLowerCase()}@flightschool.com`,
+          passwordHash: passwordHash || '123456'
         }
       });
 
