@@ -16,12 +16,8 @@ export default function WeatherHoldsPage() {
   const [showHistory, setShowHistory] = useState(false);
 
   const [metarData, setMetarData] = useState(null);
-  const [tafData, setTafData] = useState(null);
   const [goNoGoData, setGoNoGoData] = useState(null);
-  const [atmosData, setAtmosData] = useState(null);
 
-  const [tafError, setTafError] = useState('');
-  const [atmosError, setAtmosError] = useState('');
   const [schedules, setSchedules] = useState([]);
 
   // Auto-refresh state
@@ -43,11 +39,7 @@ export default function WeatherHoldsPage() {
     setToast({ visible: false, msg: '', type: 'info' });
 
     setMetarData(null);
-    setTafData(null);
-    setAtmosData(null);
     setGoNoGoData(null);
-    setTafError('');
-    setAtmosError('');
 
     try {
       // Fetch METAR
@@ -64,21 +56,13 @@ export default function WeatherHoldsPage() {
       // Fetch TAF
       fetch(`${API_BASE}/weather/taf/${targetIcao}`)
         .then(res => res.json())
-        .then(data => {
-          if (data.error) setTafError(data.error);
-          else { setTafData(data); setTafError(''); }
-        })
-        .catch(err => setTafError(err.message));
+        .catch(err => console.error(err.message));
 
       // Fetch Atmos if lat/lon available
       if (metarJson.lat && metarJson.lon) {
         fetch(`${API_BASE}/weather/openmeteo?lat=${metarJson.lat}&lon=${metarJson.lon}`)
           .then(res => res.json())
-          .then(data => {
-            if (data.error) setAtmosError(data.error);
-            else { setAtmosData(data); setAtmosError(''); }
-          })
-          .catch(err => setAtmosError(err.message));
+          .catch(err => console.error(err.message));
       }
 
       // Fetch GoNoGo
@@ -115,7 +99,7 @@ export default function WeatherHoldsPage() {
       fetchGoNoGo(icao, studentType);
       fetchSchedules();
     }
-  }, [studentType]);
+  }, [studentType, icao]);
 
   const fetchSchedules = async () => {
     try {
@@ -129,7 +113,7 @@ export default function WeatherHoldsPage() {
 
   useEffect(() => {
     handleSearch(icao);
-  }, []);
+  }, [handleSearch, icao]);
 
   // Auto-refresh countdown
   useEffect(() => {

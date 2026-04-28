@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
   User, ShieldCheck, HeartPulse, FileText, Lock, 
   ChevronRight, ChevronLeft, Save, Plus, Trash2, CheckCircle2 
 } from "lucide-react";
-
 
 const InputField = ({ label, name, type = "text", required, fullWidth, value, onChange, options }) => (
   <div className={`space-y-1 ${fullWidth ? 'col-span-2' : ''}`}>
@@ -53,6 +52,7 @@ export default function StudentForm() {
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState([]);
 
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", dob: "", gender: "", 
@@ -74,9 +74,9 @@ export default function StudentForm() {
     if (isEdit) {
       loadStudent();
     }
-  }, [id]);
+  }, [id, isEdit, loadStudent]);
 
-  const loadStudent = async () => {
+  const loadStudent = useCallback(async () => {
     try {
       const res = await fetch(`http://localhost:3000/api/students/${id}`);
       const data = await res.json();
@@ -96,7 +96,7 @@ export default function StudentForm() {
     } catch (error) {
       console.error("Failed to load student:", error);
     }
-  };
+  }, [id]);
 
   const handleChange = (e) => {
     setForm({
@@ -152,7 +152,7 @@ export default function StudentForm() {
       <div className="mb-10">
         <div className="flex flex-wrap gap-2 md:gap-0 md:justify-between relative">
           <div className="absolute top-1/2 left-0 w-full h-[2px] bg-slate-100 dark:bg-slate-800 -z-10 hidden md:block rounded-full"></div>
-          {steps.map((s, idx) => {
+          {steps.map((s) => {
             const Icon = s.icon;
             const isCompleted = step > s.num;
             const isActive = step === s.num;

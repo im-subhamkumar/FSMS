@@ -1,14 +1,10 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 export default function SlotRequestsRoot() {
     const [requests, setRequests] = useState([]);
     const [filter, setFilter] = useState('All'); // All, Pending, Approved, Rejected
 
-    useEffect(() => {
-        fetchRequests();
-    }, []);
-
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async () => {
         try {
             const response = await fetch('http://localhost:3000/api/slot-requests');
             if (response.ok) {
@@ -18,7 +14,11 @@ export default function SlotRequestsRoot() {
         } catch (error) {
             console.error('Error fetching slot requests:', error);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchRequests();
+    }, [fetchRequests]);
 
     const handleUpdateStatus = async (id, newStatus) => {
         try {

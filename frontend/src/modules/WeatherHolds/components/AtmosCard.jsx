@@ -17,7 +17,6 @@ export default function AtmosCard({ atmosData, error, isLoading }) {
 
     const cw = atmosData.current_weather || {};
     const hourly = atmosData.hourly || {};
-    const provider = atmosData.provider || 'Open-Meteo';
     const idx = 0;
 
     const safeHourly = (key) => {

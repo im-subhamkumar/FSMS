@@ -2,11 +2,10 @@
 // Create or Edit invoice with dynamic line items & Student drop-down
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, Loader } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Loader, Tag } from 'lucide-react';
 import { useInvoices } from '../hooks/useInvoices';
-import { Breadcrumbs } from '../../../components/ui/Breadcrumbs';
 
-const EMPTY_ITEM = { description: '', quantity: 1, unitPrice: '' };
+const EMPTY_ITEM = { catalogId: 'custom', description: '', quantity: 1, unitPrice: '' };
 
 const fmt = (val) =>
   new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(parseFloat(val) || 0);
@@ -23,6 +22,7 @@ export default function InvoiceForm() {
 
   // Form state
   const [students, setStudents] = useState([]);
+  const [pricingRates, setPricingRates] = useState([]);
   const [studentId, setStudentId] = useState('');
   const [issuedById, setIssuedById] = useState('1'); // Admin default
   const [dueDate, setDueDate] = useState('');
@@ -32,10 +32,19 @@ export default function InvoiceForm() {
   useEffect(() => {
     (async () => {
       try {
-        const url = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/students` : 'http://localhost:3000/api/students';
-        const res = await fetch(url);
-        const data = await res.json();
-        setStudents(Array.isArray(data) ? data : []);
+        const studentsUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/students` : 'http://localhost:3000/api/students';
+        const pricingUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/pricing-rates` : 'http://localhost:3000/api/pricing-rates';
+        
+        const [studentsRes, pricingRes] = await Promise.all([
+          fetch(studentsUrl),
+          fetch(pricingUrl)
+        ]);
+        
+        const studentsData = await studentsRes.json();
+        const pricingData = await pricingRes.json();
+        
+        setStudents(Array.isArray(studentsData) ? studentsData : []);
+        setPricingRates(Array.isArray(pricingData) ? pricingData : []);
 
         if (isEdit) {
           const inv = await getInvoice(id);
@@ -45,11 +54,22 @@ export default function InvoiceForm() {
           setNotes(inv.notes || '');
           setItems(
             inv.items.length > 0
-              ? inv.items.map(it => ({
-                  description: it.description,
-                  quantity: it.quantity,
-                  unitPrice: parseFloat(it.unitPrice),
-                }))
+              ? inv.items.map(it => {
+                  let matchedId = 'custom';
+                  if (Array.isArray(pricingData)) {
+                    // Exact match or string inclusion
+                    const match = pricingData.find(r => 
+                      r.name === it.description || it.description.includes(r.name) || r.name.includes(it.description)
+                    );
+                    if (match) matchedId = String(match.id);
+                  }
+                  return {
+                    catalogId: matchedId,
+                    description: it.description,
+                    quantity: it.quantity,
+                    unitPrice: parseFloat(it.unitPrice),
+                  };
+                })
               : [{ ...EMPTY_ITEM }]
           );
         }
@@ -65,6 +85,22 @@ export default function InvoiceForm() {
     setItems(prev => prev.map((item, i) =>
       i === idx ? { ...item, [field]: value } : item
     ));
+  };
+
+  const handleCatalogChange = (idx, value) => {
+    if (value === 'custom') {
+      setItems(prev => prev.map((it, i) => i === idx ? { ...it, catalogId: 'custom', description: '' } : it));
+    } else {
+      const rate = pricingRates.find(r => String(r.id) === value);
+      if (rate) {
+        setItems(prev => prev.map((it, i) => i === idx ? {
+          ...it,
+          catalogId: value,
+          description: rate.name,
+          unitPrice: rate.amount
+        } : it));
+      }
+    }
   };
 
   const addItem = () => setItems(prev => [...prev, { ...EMPTY_ITEM }]);
@@ -97,7 +133,6 @@ export default function InvoiceForm() {
       };
 
       if (isEdit) {
-        // Send items along with update to the new backend endpoint
         await updateInvoice(id, payload);
       } else {
         const created = await createInvoice(payload);
@@ -120,6 +155,9 @@ export default function InvoiceForm() {
       </div>
     );
   }
+
+  // Pre-calculate grouped pricing rates for the dropdowns
+  const categories = ["COURSE_FEE", "AIRCRAFT_RENTAL", "INSTRUCTOR_FEE", "EXAM_FEE", "OTHER"];
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-10">
@@ -187,8 +225,8 @@ export default function InvoiceForm() {
 
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Line Items
+            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
+              <Tag className="w-4 h-4" /> Line Items
             </h2>
             <button
               type="button"
@@ -200,23 +238,56 @@ export default function InvoiceForm() {
           </div>
 
           <div className="grid grid-cols-12 gap-3 mb-2 px-1">
-            <span className="col-span-5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Description</span>
-            <span className="col-span-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-center">Qty</span>
+            <span className="col-span-5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Product / Service</span>
+            <span className="col-span-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-center">Qty / Hrs</span>
             <span className="col-span-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Unit Price</span>
             <span className="col-span-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right pr-2">Total</span>
           </div>
 
           {items.map((item, idx) => (
-            <div key={idx} className="grid grid-cols-12 gap-3 mb-3 items-center group">
-              <div className="col-span-5">
-                <input
-                  type="text"
-                  placeholder="e.g. Flight Training"
-                  value={item.description}
-                  onChange={e => updateItem(idx, 'description', e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all"
-                />
+            <div key={idx} className="grid grid-cols-12 gap-3 mb-4 items-start group">
+              <div className="col-span-5 flex flex-col gap-2">
+                <select
+                  value={item.catalogId}
+                  onChange={e => handleCatalogChange(idx, e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-blue-50/50 dark:bg-blue-900/10 text-sm text-blue-900 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-medium transition-all"
+                >
+                  <option value="custom">-- Custom Item --</option>
+                  {categories.map(cat => {
+                    const rates = pricingRates.filter(r => r.category === cat);
+                    if (rates.length === 0) return null;
+                    return (
+                      <optgroup key={cat} label={cat.replace('_', ' ')}>
+                        {rates.map(r => (
+                          <option key={r.id} value={String(r.id)}>
+                            {r.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+                </select>
+
+                {item.catalogId === 'custom' && (
+                  <input
+                    type="text"
+                    placeholder="Enter custom description"
+                    value={item.description}
+                    onChange={e => updateItem(idx, 'description', e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all font-medium"
+                  />
+                )}
+                {item.catalogId !== 'custom' && (
+                  <input
+                    type="text"
+                    disabled
+                    value={item.description}
+                    onChange={e => updateItem(idx, 'description', e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-md border border-transparent bg-transparent text-gray-500 dark:text-gray-400 text-xs truncate"
+                  />
+                )}
               </div>
+              
               <div className="col-span-2">
                 <input
                   type="number"
@@ -226,7 +297,9 @@ export default function InvoiceForm() {
                   className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all"
                 />
               </div>
-              <div className="col-span-3">
+
+              <div className="col-span-3 flex items-center">
+                <span className="text-gray-400 px-2">₹</span>
                 <input
                   type="number"
                   min="0"
@@ -234,10 +307,13 @@ export default function InvoiceForm() {
                   placeholder="0.00"
                   value={item.unitPrice}
                   onChange={e => updateItem(idx, 'unitPrice', e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all"
+                  className={`w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all ${
+                    item.catalogId !== 'custom' ? 'bg-gray-100 dark:bg-gray-800/50' : 'bg-gray-50 dark:bg-gray-900'
+                  }`}
                 />
               </div>
-              <div className="col-span-2 flex items-center justify-between pl-1">
+
+              <div className="col-span-2 flex items-center justify-between pl-1 pt-2">
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 text-right flex-1">
                   ₹{fmt(lineTotal(item))}
                 </span>

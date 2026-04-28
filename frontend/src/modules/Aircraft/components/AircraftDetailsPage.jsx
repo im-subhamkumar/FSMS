@@ -1,6 +1,6 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { deleteAircraft } from "./AircraftData";
+import { deleteAircraft } from "./AircraftData.jsx";
 import EditAircraftModal from "./EditAircraftModal";
 import StatusBadge from "./StatusBadge";
 import { ArrowLeft, Edit2, Trash2, Plane, Save, Calendar, Clock, Fuel, Users } from "lucide-react";
@@ -15,7 +15,7 @@ const AircraftDetailsPage = () => {
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
-  const fetchAircraftDetails = async () => {
+  const fetchAircraftDetails = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(`${API_URL}/aircraft/${encodeURIComponent(id)}`);
@@ -27,18 +27,18 @@ const AircraftDetailsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     if (id) fetchAircraftDetails();
-  }, [id]);
+  }, [id, fetchAircraftDetails]);
 
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this aircraft?")) {
       try {
         await deleteAircraft(id);
         navigate("/aircraft");
-      } catch (e) {
+      } catch {
         alert("Failed to delete aircraft");
       }
     }
