@@ -78,7 +78,6 @@ services:
       backend:
         condition: service_healthy   # Wait until API is ready
     environment:
-      VITE_API_URL: "http://localhost:3000/api"
       NODE_ENV: development
     ports:
       - "5173:5173"       # Accessible from host at localhost:5173
