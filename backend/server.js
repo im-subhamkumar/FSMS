@@ -120,6 +120,10 @@ app.use('/api/slot-requests', slotRequestsRouter);
 import invoicesRouter from './routes/invoices.js';
 app.use('/api/invoices', invoicesRouter);
 
+// T3 — Report Dashboard Module
+import reportRoutes from './routes/reportRoutes.js';
+app.use('/api/reports', reportRoutes);
+
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
