@@ -358,37 +358,6 @@ export default function StudentForm() {
                         className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50" 
                         placeholder="e.g. Scan of Passport"
                       />
-              {/* Existing Documents */}
-              {form.documents.length > 0 && (
-                <div className="mb-6 space-y-3">
-                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Already Uploaded</h3>
-                  {form.documents.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-700 rounded-xl hover:shadow-sm transition-all duration-200 group">
-                      <div className="flex items-center gap-3">
-                        <FileText className="text-indigo-500" size={24} />
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{doc.documentType || 'Document'} <span className="text-xs font-normal text-slate-500 ml-2">Stored File</span></p>
-                          <a href={doc.fileUrl.startsWith('http') ? doc.fileUrl : `http://${window.location.hostname}:3000${doc.fileUrl}`} target="_blank" rel="noreferrer" className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 group-hover:underline">View Original File</a>
-                        </div>
-                      </div>
-                      {isEdit && (
-                        <button 
-                          type="button" 
-                          onClick={async () => {
-                            if (!window.confirm("Permanently delete this document?")) return;
-                            try {
-                              await fetch(`${API_BASE}/students/${id}/documents/${doc.id}`, { method: 'DELETE' });
-                              setForm(prev => ({ ...prev, documents: prev.documents.filter(d => d.id !== doc.id) }));
-                            } catch (e) {
-                              console.error(e);
-                            }
-                          }}
-                          className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg opacity-60 group-hover:opacity-100 transition-all"
-                          title="Delete Stored Document"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      )}
                     </div>
                     <div className="md:col-span-6">
                       <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Secure Link (URL)</label>

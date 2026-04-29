@@ -5,12 +5,6 @@ import {
   FileBadge, ShieldCheck, ChevronLeft, ChevronRight 
 } from "lucide-react";
 
-export default function StudentsRoot() {
-  const navigate = useNavigate();
-
-  const [students, setStudents] = useState([]);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
 const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 export default function StudentsRoot() {
