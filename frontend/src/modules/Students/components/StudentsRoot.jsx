@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Users, UserPlus, Search, Edit2, Trash2, HeartPulse, 
-  FileBadge, ShieldCheck, ChevronLeft, ChevronRight, BookOpen
+  FileBadge, ShieldCheck, ChevronLeft, ChevronRight 
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
@@ -64,13 +64,11 @@ export default function StudentsRoot() {
     }
   };
 
-  const filtered = students.filter(s => {
-    const matchesSearch = `${s.firstName} ${s.lastName} ${s.email} ${s.studentId}`
+  const filtered = students.filter(s =>
+    `${s.firstName} ${s.lastName} ${s.email} ${s.studentId}`
       .toLowerCase()
-      .includes(search.toLowerCase());
-    const matchesBatch = selectedBatch ? s.batch === selectedBatch : true;
-    return matchesSearch && matchesBatch;
-  });
+      .includes(search.toLowerCase())
+  );
 
   const last = page * perPage;
   const first = last - perPage;
@@ -101,33 +99,21 @@ export default function StudentsRoot() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-            {selectedBatch ? (
-              <button 
-                onClick={() => setSelectedBatch(null)} 
-                className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500"
-                title="Back to Batches"
-              >
-                <ChevronLeft size={24} />
-              </button>
-            ) : (
-              <Users className="text-indigo-500" size={32} />
-            )}
-            {selectedBatch ? `${selectedBatch} Students` : "Students Directory"}
+            <Users className="text-indigo-500" size={32} />
+            Students Directory
           </h1>
           <p className="mt-1 text-slate-500 dark:text-slate-400 font-medium">
-            {selectedBatch ? `Managing students enrolled in ${selectedBatch}` : "Manage profiles, licenses, medical records, and documentation"}
+            Manage profiles, licenses, medical records, and documentation
           </p>
         </div>
 
-        {!selectedBatch && (
-          <button
-            onClick={() => navigate("/students/new")}
-            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-6 py-2.5 rounded-xl shadow-lg shadow-indigo-500/30 transition-all duration-300 hover:-translate-y-0.5 font-semibold"
-          >
-            <UserPlus size={18} />
-            Add Student
-          </button>
-        )}
+        <button
+          onClick={() => navigate("/students/new")}
+          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-6 py-2.5 rounded-xl shadow-lg shadow-indigo-500/30 transition-all duration-300 hover:-translate-y-0.5 font-semibold"
+        >
+          <UserPlus size={18} />
+          Add Student
+        </button>
       </div>
 
       {/* STAT CARDS */}
@@ -160,44 +146,8 @@ export default function StudentsRoot() {
         />
       </div>
 
-      {/* MAIN CONTENT AREA */}
-      {!selectedBatch ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <BatchCard 
-            title="Ground School"
-            desc="Classroom training and theory preparation"
-            icon={<BookOpen size={28} className="text-blue-600 dark:text-blue-400" />}
-            color="blue"
-            count={students.filter(s => s.batch === "Ground School").length}
-            onClick={() => { setSelectedBatch("Ground School"); setPage(1); setSearch(""); }}
-          />
-          <BatchCard 
-            title="Simulator"
-            desc="Virtual flight environment training and procedures"
-            icon={<ShieldCheck size={28} className="text-indigo-600 dark:text-indigo-400" />}
-            color="indigo"
-            count={students.filter(s => s.batch === "Simulator").length}
-            onClick={() => { setSelectedBatch("Simulator"); setPage(1); setSearch(""); }}
-          />
-          <BatchCard 
-            title="Dual Flights"
-            desc="In-flight training alongside an instructor"
-            icon={<Users size={28} className="text-emerald-600 dark:text-emerald-400" />}
-            color="emerald"
-            count={students.filter(s => s.batch === "Dual Flights").length}
-            onClick={() => { setSelectedBatch("Dual Flights"); setPage(1); setSearch(""); }}
-          />
-          <BatchCard 
-            title="Solo Flights"
-            desc="Independent flight practice and logging"
-            icon={<HeartPulse size={28} className="text-amber-600 dark:text-amber-400" />}
-            color="amber"
-            count={students.filter(s => s.batch === "Solo Flights").length}
-            onClick={() => { setSelectedBatch("Solo Flights"); setPage(1); setSearch(""); }}
-          />
-        </div>
-      ) : (
-      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-700 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
+      {/* SEARCH AND TABLE CONTAINER */}
+      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-700 overflow-hidden">
         
         {/* SEARCH BAR */}
         <div className="p-5 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
@@ -330,50 +280,6 @@ export default function StudentsRoot() {
             </button>
           </div>
         </div>
-      </div>
-      )}
-    </div>
-  );
-}
-
-function BatchCard({ title, desc, icon, color, count, onClick }) {
-  const colorStyles = {
-    blue: "hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-blue-500/10",
-    indigo: "hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-indigo-500/10",
-    emerald: "hover:border-emerald-300 dark:hover:border-emerald-600 hover:shadow-emerald-500/10",
-    amber: "hover:border-amber-300 dark:hover:border-amber-600 hover:shadow-amber-500/10"
-  };
-
-  const bgStyles = {
-    blue: "bg-blue-50 dark:bg-blue-500/10",
-    indigo: "bg-indigo-50 dark:bg-indigo-500/10",
-    emerald: "bg-emerald-50 dark:bg-emerald-500/10",
-    amber: "bg-amber-50 dark:bg-amber-500/10"
-  };
-
-  return (
-    <div 
-      onClick={onClick}
-      className={`bg-white dark:bg-slate-800 rounded-[2rem] p-6 shadow-sm border border-slate-200/60 dark:border-slate-700 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group flex flex-col justify-between min-h-[180px] ${colorStyles[color]}`}
-    >
-      <div>
-        <div className="flex justify-between items-start mb-4">
-          <div className={`p-4 rounded-2xl ${bgStyles[color]} group-hover:scale-110 transition-transform duration-300`}>
-            {icon}
-          </div>
-          <div className="px-4 py-1.5 bg-slate-100 dark:bg-slate-700 rounded-full text-sm font-bold text-slate-700 dark:text-slate-200">
-            {count} Enrolled
-          </div>
-        </div>
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors">
-          {title}
-        </h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-          {desc}
-        </p>
-      </div>
-      <div className="mt-6 flex items-center text-sm font-semibold text-slate-400 group-hover:text-indigo-500 transition-colors">
-        View Students <ChevronRight size={16} className="ml-1 group-hover:translate-x-1 transition-transform" />
       </div>
     </div>
   );

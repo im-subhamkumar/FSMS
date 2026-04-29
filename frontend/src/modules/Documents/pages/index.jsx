@@ -1,16 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { FileText, Search, Plus, Trash2, Download, AlertCircle, Clock, History, File, ShieldCheck, FileSearch } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+    Search, FileText, Download, Trash2, Plus, 
+    FileSearch, Clock, History, AlertCircle, CheckCircle2 
+} from 'lucide-react';
 import { useDocumentStore } from '../../../store/documentStore';
 import { useDocumentCategoryStore } from '../../../store/documentCategoryStore';
-import { UploadModal } from '../components/UploadModal';
-import { DocumentDetailsModal } from '../components/DocumentDetailsModal';
+import UploadModal from '../components/UploadModal';
+import DocumentDetailsModal from '../components/DocumentDetailsModal';
 
 export default function DocumentsRoot() {
-    const { documents, fetchDocuments, deleteDocument, isLoading } = useDocumentStore();
+    const { documents, isLoading, fetchDocuments, deleteDocument } = useDocumentStore();
     const { categories, fetchCategories } = useDocumentCategoryStore();
-    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryIdFilter, setCategoryIdFilter] = useState('');
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [documentToUpdate, setDocumentToUpdate] = useState(null);
 
@@ -19,54 +23,50 @@ export default function DocumentsRoot() {
         fetchCategories();
     }, [fetchDocuments, fetchCategories]);
 
-    const filteredDocuments = documents.filter(doc => {
-        const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                              doc.category?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = categoryIdFilter ? doc.categoryId.toString() === categoryIdFilter.toString() : true;
-        return matchesSearch && matchesCategory;
-    });
+    const filteredDocuments = useMemo(() => {
+        return documents.filter(doc => {
+            const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                doc.category?.name.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesCategory = !categoryIdFilter || doc.categoryId === parseInt(categoryIdFilter);
+            return matchesSearch && matchesCategory;
+        });
+    }, [documents, searchQuery, categoryIdFilter]);
 
     const getStatusStyle = (doc) => {
-        if (doc.status === 'EXPIRED') return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800/50';
-        const warningDays = doc.category?.warningThresholdDays || 30;
-        if (doc.expiryDate && new Date(doc.expiryDate) < new Date(Date.now() + warningDays * 24 * 60 * 60 * 1000)) {
-            return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50';
+        switch (doc.status) {
+            case 'ACTIVE': return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
+            case 'EXPIRED': return 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20';
+            case 'ARCHIVED': return 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20';
+            default: return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20';
         }
-        return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50';
     };
 
     const getStatusText = (doc) => {
-        if (doc.status === 'EXPIRED') return 'Expired';
-        const warningDays = doc.category?.warningThresholdDays || 30;
-        if (doc.expiryDate && new Date(doc.expiryDate) < new Date(Date.now() + warningDays * 24 * 60 * 60 * 1000)) {
-            return 'Expiring Soon';
-        }
-        return 'Valid';
+        return doc.status.charAt(0) + doc.status.slice(1).toLowerCase();
     };
 
     const StatusIcon = ({ doc, className }) => {
-        if (doc.status === 'EXPIRED') return <AlertCircle className={className} />;
-        const warningDays = doc.category?.warningThresholdDays || 30;
-        if (doc.expiryDate && new Date(doc.expiryDate) < new Date(Date.now() + warningDays * 24 * 60 * 60 * 1000)) {
-            return <Clock className={className} />;
+        switch (doc.status) {
+            case 'ACTIVE': return <CheckCircle2 className={className} />;
+            case 'EXPIRED': return <AlertCircle className={className} />;
+            case 'ARCHIVED': return <History className={className} />;
+            default: return <FileText className={className} />;
         }
-        return <ShieldCheck className={className} />;
     };
 
     return (
-        <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-300">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="flex flex-col h-full space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Document Library</h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">Manage and track all organizational documents.</p>
+                    <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Document Management</h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1">Upload, track, and manage all your flight school documentation.</p>
                 </div>
                 <button 
                     onClick={() => {
                         setDocumentToUpdate(null);
                         setIsUploadModalOpen(true);
                     }}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm shadow-blue-600/20 active:scale-95"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25 active:scale-95"
                 >
                     <Plus className="w-5 h-5" />
                     Upload Document
@@ -174,7 +174,7 @@ export default function DocumentsRoot() {
                                     </a>
                                     <button 
                                         onClick={() => {
-                                            if(confirm('Are you sure you want to delete this document?')) {
+                                            if(window.confirm('Are you sure you want to delete this document?')) {
                                                 deleteDocument(doc.id);
                                             }
                                         }}

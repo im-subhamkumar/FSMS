@@ -14,7 +14,7 @@ export const useDocumentStore = create((set, get) => ({
         set({ isLoading: true, error: null });
         try {
             const queryParams = new URLSearchParams(
-                Object.entries(filters).filter(([_, v]) => v)
+                Object.entries(filters).filter(([, v]) => v)
             ).toString();
             
             const url = queryParams 
