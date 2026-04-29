@@ -6,7 +6,7 @@ import GoNoGoCard from '../components/GoNoGoCard';
 import HistoryPanel from '../components/HistoryPanel';
 
 const REFRESH_INTERVAL = 300; // 5 minutes in seconds
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 export default function WeatherHoldsPage() {
   const [icao, setIcao] = useState('VOBG');

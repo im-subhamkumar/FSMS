@@ -29,7 +29,7 @@ function Avatar({ instructor }) {
   if (instructor.profilePhotoUrl) {
     return (
       <img
-        src={`http://localhost:3000${instructor.profilePhotoUrl}`}
+        src={`http://${window.location.hostname}:3000${instructor.profilePhotoUrl}`}
         alt={initials}
         className="h-10 w-10 rounded-xl object-cover shadow-sm ring-2 ring-white"
         onError={(e) => { e.target.onerror = null; e.target.src = "https://ui-avatars.com/api/?name=" + initials; }}

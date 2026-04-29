@@ -9,7 +9,7 @@ export default function MaintenanceCalendar() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+        const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
         const [squawksRes, activitiesRes] = await Promise.all([
           fetch(`${API_URL}/maintenance/squawks`),
           fetch(`${API_URL}/maintenance/activities`)

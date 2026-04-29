@@ -45,6 +45,8 @@ const InputField = ({ label, name, type = "text", required, fullWidth, value, on
   </div>
 );
 
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
+
 export default function StudentForm() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -103,7 +105,7 @@ export default function StudentForm() {
 
   const loadStudent = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/students/${id}`);
+      const res = await fetch(`${API_BASE}/students/${id}`);
       const data = await res.json();
 
       setForm(prev => ({
@@ -174,8 +176,8 @@ export default function StudentForm() {
     setIsSubmitting(true);
 
     const url = isEdit
-      ? `http://localhost:3000/api/students/${id}`
-      : `http://localhost:3000/api/students`;
+      ? `${API_BASE}/students/${id}`
+      : `${API_BASE}/students`;
 
     const method = isEdit ? "PUT" : "POST";
 
@@ -185,6 +187,37 @@ export default function StudentForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
       });
+      const data = await res.json();
+
+      const newStudentId = isEdit ? id : data.id;
+
+      // Upload newly added files seamlessly
+      if (validPendingFiles.length > 0) {
+        let uploadErrors = 0;
+        await Promise.all(validPendingFiles.map(async (pf) => {
+          const fd = new FormData();
+          fd.append('file', pf.file);
+          fd.append('documentType', pf.type || 'General');
+          try {
+            const upRes = await fetch(`${API_BASE}/students/${newStudentId}/documents`, {
+              method: 'POST',
+              body: fd
+            });
+            if (!upRes.ok) {
+              uploadErrors++;
+              console.error("Failed to upload document", pf.file.name, await upRes.text());
+            }
+          } catch (err) {
+            uploadErrors++;
+            console.error("Network error during document upload", err);
+          }
+        }));
+
+        if (uploadErrors > 0) {
+          alert(`Student profile saved, but ${uploadErrors} document(s) failed to upload. Please edit the student to re-upload them.`);
+        }
+      }
+
       navigate("/students");
     } catch (error) {
       console.error("Submission failed", error);
@@ -325,6 +358,37 @@ export default function StudentForm() {
                         className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50" 
                         placeholder="e.g. Scan of Passport"
                       />
+              {/* Existing Documents */}
+              {form.documents.length > 0 && (
+                <div className="mb-6 space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Already Uploaded</h3>
+                  {form.documents.map((doc, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-700 rounded-xl hover:shadow-sm transition-all duration-200 group">
+                      <div className="flex items-center gap-3">
+                        <FileText className="text-indigo-500" size={24} />
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{doc.documentType || 'Document'} <span className="text-xs font-normal text-slate-500 ml-2">Stored File</span></p>
+                          <a href={doc.fileUrl.startsWith('http') ? doc.fileUrl : `http://${window.location.hostname}:3000${doc.fileUrl}`} target="_blank" rel="noreferrer" className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 group-hover:underline">View Original File</a>
+                        </div>
+                      </div>
+                      {isEdit && (
+                        <button 
+                          type="button" 
+                          onClick={async () => {
+                            if (!window.confirm("Permanently delete this document?")) return;
+                            try {
+                              await fetch(`${API_BASE}/students/${id}/documents/${doc.id}`, { method: 'DELETE' });
+                              setForm(prev => ({ ...prev, documents: prev.documents.filter(d => d.id !== doc.id) }));
+                            } catch (e) {
+                              console.error(e);
+                            }
+                          }}
+                          className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg opacity-60 group-hover:opacity-100 transition-all"
+                          title="Delete Stored Document"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                     </div>
                     <div className="md:col-span-6">
                       <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Secure Link (URL)</label>

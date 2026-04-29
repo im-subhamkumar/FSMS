@@ -1,5 +1,5 @@
 // T3 — useInvoices hook (T10-aligned: userId, amount, PENDING/PAID/OVERDUE)
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 export function useInvoices() {
   const getInvoices = async (params = {}) => {

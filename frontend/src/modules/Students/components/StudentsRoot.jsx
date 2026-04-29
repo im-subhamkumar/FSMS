@@ -11,36 +11,45 @@ export default function StudentsRoot() {
   const [students, setStudents] = useState([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
-  const perPage = 10;
+export default function StudentsRoot() {
+    const navigate = useNavigate();
 
-  const fetchStudents = useCallback(async () => {
-    try {
-      const res = await fetch("http://localhost:3000/api/students");
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setStudents(data);
-      } else {
-        console.error("Failed to fetch students. API returned:", data);
-        setStudents([]); // Fallback to empty array to prevent .filter crash
-      }
-    } catch (err) {
-      console.error("Network error fetching students:", err);
-      setStudents([]); // Fallback to empty array
-    }
-  }, []);
+    const [students, setStudents] = useState([]);
+    const [search, setSearch] = useState("");
+    const [page, setPage] = useState(1);
+    const [selectedBatch, setSelectedBatch] = useState(null);
 
-  useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+    const perPage = 10;
 
-  const deleteStudent = async (id) => {
-    if (!window.confirm("Delete student?")) return;
+    const fetchStudents = useCallback(async () => {
+        try {
+            const res = await fetch(`${API_BASE}/students`);
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setStudents(data);
+            } else {
+                console.error("Failed to fetch students. API returned:", data);
+                setStudents([]); // Fallback to empty array to prevent .filter crash
+            }
+        } catch (err) {
+            console.error("Network error fetching students:", err);
+            setStudents([]); // Fallback to empty array
+        }
+    }, []);
 
-    try {
-      const res = await fetch(`http://localhost:3000/api/students/${id}`, {
-        method: "DELETE"
-      });
+    useEffect(() => {
+        fetchStudents();
+    }, [fetchStudents]);
+
+    const deleteStudent = async (id) => {
+        if (!window.confirm("Delete student?")) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/students/${id}`, {
+                method: "DELETE"
+            });
 
       const data = await res.json();
 

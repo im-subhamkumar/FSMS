@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { updateAircraft } from "./AircraftData.jsx";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 // API_URL is available for future direct fetch calls in this component
 
 const EditAircraftModal = ({ aircraft, onClose, onRefresh }) => {

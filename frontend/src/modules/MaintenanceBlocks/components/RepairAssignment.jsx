@@ -16,7 +16,7 @@ export default function RepairAssignment() {
   }, []);
 
   const fetchData = () => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
     setLoading(true);
     
     Promise.all([
@@ -42,7 +42,7 @@ export default function RepairAssignment() {
     if (!selectedAircraftId || !selectedAmeId) return;
     setAssigning(true);
     
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
     fetch(`${API_URL}/maintenance/assign-ame`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

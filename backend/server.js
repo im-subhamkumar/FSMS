@@ -78,6 +78,8 @@ app.get('/', (req, res) => {
 });
 
 // ──────────────────────────────────────────
+// Mount team module routers below
+// ──────────────────────────────────────────
 // Team Module Routers
 // ──────────────────────────────────────────
 import studentsRouter from './routes/students.js';
@@ -114,6 +116,10 @@ app.use('/api/slot-requests', slotRequestsRouter);
 // T3 — Invoices Module
 import invoicesRouter from './routes/invoices.js';
 app.use('/api/invoices', invoicesRouter);
+
+// T3 — Report Dashboard Module
+import reportRoutes from './routes/reportRoutes.js';
+app.use('/api/reports', reportRoutes);
 
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {

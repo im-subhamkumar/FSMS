@@ -1,4 +1,22 @@
 import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    Award, Plus, Search, RefreshCw,
+    CheckCircle, XCircle, Edit2, Trash2,
+    AlertCircle, X, Save
+} from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
+
+const SkeletonRow = () => (
+    <tr className="animate-pulse">
+        {[...Array(5)].map((_, i) => (
+            <td key={i} className="px-4 py-4">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+            </td>
+        ))}
+    </tr>
+);
 
 export default function QualificationTypesRoot() {
     return (

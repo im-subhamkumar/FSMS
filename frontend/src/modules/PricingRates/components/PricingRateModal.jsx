@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Tags, AlertCircle, Loader2 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000`;
 
 const CATEGORIES = [
     { value: 'AIRCRAFT_RENTAL', label: '✈️  Aircraft Rental' },

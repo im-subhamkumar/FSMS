@@ -32,8 +32,8 @@ export default function InvoiceForm() {
   useEffect(() => {
     (async () => {
       try {
-        const studentsUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/students` : 'http://localhost:3000/api/students';
-        const pricingUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/pricing-rates` : 'http://localhost:3000/api/pricing-rates';
+        const studentsUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/students` : `http://${window.location.hostname}:3000/api/students`;
+        const pricingUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/pricing-rates` : `http://${window.location.hostname}:3000/api/pricing-rates`;
         
         const [studentsRes, pricingRes] = await Promise.all([
           fetch(studentsUrl),

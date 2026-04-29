@@ -5,7 +5,7 @@ import EditAircraftModal from "./EditAircraftModal";
 import StatusBadge from "./StatusBadge";
 import { ArrowLeft, Edit2, Trash2, Plane, Save, Calendar, Clock, Fuel, Users } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 const AircraftDetailsPage = () => {
   const { id } = useParams();

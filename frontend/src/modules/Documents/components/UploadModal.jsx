@@ -32,7 +32,7 @@ export const UploadModal = ({ isOpen, onClose, existingDocument }) => {
 
             const fetchAircrafts = async () => {
                 try {
-                    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/aircraft`);
+                    const response = await fetch(`${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`}/aircraft`);
                     if (response.ok) {
                         const data = await response.json();
                         setAircrafts(data);
