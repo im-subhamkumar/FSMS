@@ -24,7 +24,7 @@ export default function InvoiceForm() {
   const [students, setStudents] = useState([]);
   const [pricingRates, setPricingRates] = useState([]);
   const [studentId, setStudentId] = useState('');
-  const [issuedById, setIssuedById] = useState('1'); // Admin default
+  const [issuedById, setIssuedById] = useState(''); // Backend will auto-resolve to Admin
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState([{ ...EMPTY_ITEM }]);
