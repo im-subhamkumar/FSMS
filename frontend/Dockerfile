@@ -13,7 +13,7 @@ COPY package.json package-lock.json ./
 RUN npm install --legacy-peer-deps
 
 # Force-install packages that have React 19 peer dependency conflicts
-RUN npm install react-to-print react-leaflet leaflet recharts --force
+RUN npm install react-to-print react-leaflet leaflet recharts react-big-calendar date-fns jspdf --force
 
 # Copy the rest of the source code
 # NOTE: node_modules is excluded via .dockerignore
