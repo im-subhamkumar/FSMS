@@ -4,7 +4,7 @@ import { X, UploadCloud, File, AlertCircle } from 'lucide-react';
 import { useDocumentStore } from '../../../store/documentStore';
 import { useDocumentCategoryStore } from '../../../store/documentCategoryStore';
 
-export const UploadModal = ({ isOpen, onClose, existingDocument }) => {
+export default function UploadModal({ isOpen, onClose, existingDocument }) {
     const [mounted, setMounted] = useState(false);
     
     useEffect(() => {

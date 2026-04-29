@@ -1,13 +1,76 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+    Search, FileText, Download, Trash2, Plus, 
+    FileSearch, Clock, History, AlertCircle, CheckCircle2 
+} from 'lucide-react';
+import { useDocumentStore } from '../../../store/documentStore';
+import { useDocumentCategoryStore } from '../../../store/documentCategoryStore';
+import UploadModal from '../components/UploadModal';
+import DocumentDetailsModal from '../components/DocumentDetailsModal';
 
 export default function DocumentsRoot() {
+    const { documents, isLoading, fetchDocuments, deleteDocument } = useDocumentStore();
+    const { categories, fetchCategories } = useDocumentCategoryStore();
+    
+    const [searchQuery, setSearchQuery] = useState('');
+    const [categoryIdFilter, setCategoryIdFilter] = useState('');
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [selectedDocument, setSelectedDocument] = useState(null);
+    const [documentToUpdate, setDocumentToUpdate] = useState(null);
+
+    useEffect(() => {
+        fetchDocuments();
+        fetchCategories();
+    }, [fetchDocuments, fetchCategories]);
+
+    const filteredDocuments = useMemo(() => {
+        return documents.filter(doc => {
+            const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                doc.category?.name.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesCategory = !categoryIdFilter || doc.categoryId === parseInt(categoryIdFilter);
+            return matchesSearch && matchesCategory;
+        });
+    }, [documents, searchQuery, categoryIdFilter]);
+
+    const getStatusStyle = (doc) => {
+        switch (doc.status) {
+            case 'ACTIVE': return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
+            case 'EXPIRED': return 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20';
+            case 'ARCHIVED': return 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20';
+            default: return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20';
+        }
+    };
+
+    const getStatusText = (doc) => {
+        return doc.status.charAt(0) + doc.status.slice(1).toLowerCase();
+    };
+
+    const StatusIcon = ({ doc, className }) => {
+        switch (doc.status) {
+            case 'ACTIVE': return <CheckCircle2 className={className} />;
+            case 'EXPIRED': return <AlertCircle className={className} />;
+            case 'ARCHIVED': return <History className={className} />;
+            default: return <FileText className={className} />;
+        }
+    };
+
     return (
-        <div className="flex flex-col h-full">
-            <h1 className="text-2xl font-bold mb-4">D oc um en ts</h1>
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 flex items-center justify-center">
-                <p className="text-gray-500 dark:text-gray-400 text-lg">
-                    This is the D oc um en ts module placeholder.
-                </p>
+        <div className="flex flex-col h-full space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Document Management</h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1">Upload, track, and manage all your flight school documentation.</p>
+                </div>
+                <button 
+                    onClick={() => {
+                        setDocumentToUpdate(null);
+                        setIsUploadModalOpen(true);
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25 active:scale-95"
+                >
+                    <Plus className="w-5 h-5" />
+                    Upload Document
+                </button>
             </div>
 
             {/* Controls */}
@@ -111,7 +174,7 @@ export default function DocumentsRoot() {
                                     </a>
                                     <button 
                                         onClick={() => {
-                                            if(confirm('Are you sure you want to delete this document?')) {
+                                            if(window.confirm('Are you sure you want to delete this document?')) {
                                                 deleteDocument(doc.id);
                                             }
                                         }}

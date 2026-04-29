@@ -3,10 +3,10 @@ import React from 'react';
 export default function AnalyticsDashboardRoot() {
     return (
         <div className="flex flex-col h-full">
-            <h1 className="text-2xl font-bold mb-4">A na ly ti cs Da sh bo ar d</h1>
+            <h1 className="text-2xl font-bold mb-4">Analytics Dashboard</h1>
             <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 flex items-center justify-center">
                 <p className="text-gray-500 dark:text-gray-400 text-lg">
-                    This is the A na ly ti cs Da sh bo ar d module placeholder.
+                    This is the Analytics Dashboard module placeholder.
                 </p>
             </div>
         </div>

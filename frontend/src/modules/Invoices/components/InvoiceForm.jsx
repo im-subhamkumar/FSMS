@@ -79,6 +79,7 @@ export default function InvoiceForm() {
         setLoading(false);
       }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isEdit]);
 
   const updateItem = (idx, field, value) => {

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
+import { Search } from 'lucide-react';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 
@@ -37,7 +38,7 @@ export default function FlyingSlotsRoot() {
     const [editId, setEditId] = useState(null);
     
     // View state
-    const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
+    const [viewMode, setViewMode] = useState('list'); // 'list', 'calendar', or 'timeline'
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
     // Weather schedule state
@@ -51,7 +52,6 @@ export default function FlyingSlotsRoot() {
 
     useEffect(() => {
         fetchSlots();
-        fetchSchedules();
         fetchDropdownData();
     }, []);
 
@@ -70,46 +70,18 @@ export default function FlyingSlotsRoot() {
             }
             if (aRes.ok) {
                 const aData = await aRes.json();
-                setAircraftList(aData.data || aData); // Handle {data:[]} wrapper
+                setAircraftList(aData.data || aData);
             }
         } catch (err) { console.error('Failed to fetch dropdown data:', err); }
     };
 
-    const fetchSchedules = async () => {
-        try {
-            const res = await fetch(`${API_BASE}/schedules`);
-            if (res.ok) {
-                const data = await res.json();
-                setSchedules(Array.isArray(data) ? data : []);
-            }
-        } catch (err) { console.error('Failed to fetch schedules:', err); }
-    };
-
-    const handleSyncWeather = async () => {
-        setSyncing(true);
-        try {
-            await fetch(`${API_BASE}/schedules/sync-weather`, { method: 'POST' });
-            await fetchSchedules();
-        } catch (err) { console.error(err); }
-        finally { setSyncing(false); }
-    };
-
-    const handleDeleteSchedule = async (id) => {
-        if (!confirm('Delete this weather schedule?')) return;
-        try {
-            await fetch(`${API_BASE}/schedules/${id}`, { method: 'DELETE' });
-            fetchSchedules();
-        } catch (err) { console.error(err); }
-    };
-
     const fetchSlots = async () => {
         try {
-            // Using API_BASE/schedules instead of /slots to get weather data
             const response = await fetch(`${API_BASE}/schedules`);
             if (response.ok) {
                 const data = await response.json();
+                setSchedules(data);
                 
-                // Map the Schedule model format to the UI's expected slot format
                 const mappedSlots = data.map(s => {
                     const startDate = new Date(s.startTime);
                     const endDate = new Date(s.endTime);
@@ -130,7 +102,6 @@ export default function FlyingSlotsRoot() {
                         aircraft: s.aircraftId,
                         flightType: s.flightType || 'Dual',
                         status: s.status === 'SCHEDULED' ? 'Scheduled' : s.status === 'CANCELLED' ? 'Cancelled' : s.status,
-                        // Attach weather data for display in lists
                         weatherVerdict: s.weatherVerdict,
                         extremeWeatherWarning: s.extremeWeatherWarning,
                         cancellationReason: s.cancellationReason
@@ -138,11 +109,27 @@ export default function FlyingSlotsRoot() {
                 });
                 
                 setSlots(mappedSlots);
-                setSchedules(data); // Keep raw schedules for the detail section
             }
         } catch (error) {
             console.error('Error fetching slots:', error);
         }
+    };
+
+    const handleSyncWeather = async () => {
+        setSyncing(true);
+        try {
+            await fetch(`${API_BASE}/schedules/sync-weather`, { method: 'POST' });
+            fetchSlots();
+        } catch (err) { console.error(err); }
+        finally { setSyncing(false); }
+    };
+
+    const handleDeleteSchedule = async (id) => {
+        if (!window.confirm('Delete this weather schedule?')) return;
+        try {
+            await fetch(`${API_BASE}/schedules/${id}`, { method: 'DELETE' });
+            fetchSlots();
+        } catch (err) { console.error(err); }
     };
 
     const handleOpenModal = (slot = null) => {
@@ -150,8 +137,18 @@ export default function FlyingSlotsRoot() {
             setFormData(slot);
             setEditId(slot.id);
         } else {
-            // Default new slot to selected date if in calendar mode
-            setFormData({ date: viewMode === 'calendar' ? selectedDate : '', startTime: '', endTime: '', instructor: '', student: '', aircraft: '', flightType: 'Dual', status: 'Scheduled' });
+            setFormData({ 
+                date: selectedDate, 
+                startTime: '', 
+                endTime: '', 
+                instructor: '', 
+                instructorId: '',
+                student: '', 
+                traineeId: '',
+                aircraft: '', 
+                flightType: 'Dual', 
+                status: 'Scheduled' 
+            });
             setEditId(null);
         }
         setIsModalOpen(true);
@@ -165,64 +162,49 @@ export default function FlyingSlotsRoot() {
     };
 
     const handleSave = async () => {
-        if (!formData.date || !formData.startTime || !formData.instructor || !formData.student || !formData.aircraft) {
+        if (!formData.date || !formData.startTime || !formData.instructorId || !formData.traineeId || !formData.aircraft) {
             alert('Please fill out all required fields.');
             return;
         }
 
         try {
-            // Prepare data for the /api/schedules endpoint (expects ISO strings for times)
             const startISO = new Date(`${formData.date}T${formData.startTime}`).toISOString();
             const endISO = formData.endTime 
                 ? new Date(`${formData.date}T${formData.endTime}`).toISOString()
-                : new Date(new Date(`${formData.date}T${formData.startTime}`).getTime() + 2*60*60*1000).toISOString(); // Default 2h
+                : new Date(new Date(`${formData.date}T${formData.startTime}`).getTime() + 2*60*60*1000).toISOString();
 
             const payload = {
-                traineeId: formData.traineeId,
+                traineeId: parseInt(formData.traineeId),
                 traineeName: formData.student,
-                instructorId: formData.instructorId,
+                instructorId: parseInt(formData.instructorId),
                 instructorName: formData.instructor,
                 aircraftId: formData.aircraft,
                 flightType: formData.flightType,
                 startTime: startISO,
-                endTime: endISO
+                endTime: endISO,
+                status: formData.status.toUpperCase()
             };
 
-            if (editId) {
-                const response = await fetch(`${API_BASE}/schedules/${editId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (response.ok) {
-                    fetchSlots();
-                    setTimeout(fetchSlots, 3000);
-                    setTimeout(fetchSlots, 8000);
-                    handleCloseModal();
-                } else {
-                    const errData = await response.json();
-                    alert(errData.error || 'Failed to update slot');
-                }
+            const url = editId ? `${API_BASE}/schedules/${editId}` : `${API_BASE}/schedules`;
+            const method = editId ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                fetchSlots();
+                setTimeout(fetchSlots, 3000);
+                handleCloseModal();
             } else {
-                const response = await fetch(`${API_BASE}/schedules`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (response.ok) {
-                    fetchSlots();
-                    // Poll again after 3 seconds to catch the background weather check update
-                    setTimeout(fetchSlots, 3000);
-                    setTimeout(fetchSlots, 8000);
-                    handleCloseModal();
-                } else {
-                    const errData = await response.json();
-                    alert(errData.error || 'Failed to save slot');
-                }
+                const errData = await response.json();
+                alert(errData.error || 'Failed to save slot');
             }
         } catch (error) {
             console.error('Error saving slot:', error);
-            alert('An unexpected error occurred while saving the slot.');
+            alert('An unexpected error occurred.');
         }
     };
 
@@ -236,11 +218,13 @@ export default function FlyingSlotsRoot() {
         }
     };
 
-    const filteredSlots = slots.filter(slot => 
-        slot.student.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        slot.instructor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        slot.aircraft.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredSlots = useMemo(() => {
+        return slots.filter(slot => 
+            slot.student.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            slot.instructor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            slot.aircraft.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [slots, searchTerm]);
 
     const handleEventUpdate = async ({ event, start, end }) => {
         try {
@@ -255,7 +239,8 @@ export default function FlyingSlotsRoot() {
                 aircraftId: event.aircraft,
                 flightType: event.flightType,
                 startTime: startISO,
-                endTime: endISO
+                endTime: endISO,
+                status: event.status.toUpperCase()
             };
 
             const response = await fetch(`${API_BASE}/schedules/${event.id}`, {
@@ -266,14 +251,12 @@ export default function FlyingSlotsRoot() {
 
             if (response.ok) {
                 fetchSlots();
-                setTimeout(fetchSlots, 3000);
             } else {
                 const errData = await response.json();
                 alert(errData.error || 'Failed to update slot timings.');
             }
         } catch (err) {
             console.error('Drag/Drop Error:', err);
-            alert('An unexpected error occurred while updating the slot.');
         }
     };
 
@@ -293,7 +276,7 @@ export default function FlyingSlotsRoot() {
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {filteredSlots.length > 0 ? (
                             filteredSlots.map((slot) => (
-                                <tr key={slot.id} onClick={() => handleOpenModal(slot)} className="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer" title="Click to edit">
+                                <tr key={slot.id} onClick={() => handleOpenModal(slot)} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer" title="Click to edit">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900 dark:text-white">{slot.date}</div>
                                         <div className="text-sm text-gray-500 dark:text-gray-400">{slot.startTime} - {slot.endTime}</div>
@@ -328,13 +311,7 @@ export default function FlyingSlotsRoot() {
                         ) : (
                             <tr>
                                 <td colSpan="5" className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-                                    <div className="flex flex-col items-center">
-                                        <svg className="h-10 w-10 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        <p className="text-base font-medium">No flying slots found</p>
-                                        <p className="mt-1">Try adjusting your search or add a new slot.</p>
-                                    </div>
+                                    No flying slots found
                                 </td>
                             </tr>
                         )}
@@ -363,14 +340,6 @@ export default function FlyingSlotsRoot() {
                     <span className="truncate">{event.student.split(' ')[0]} / {event.instructor.split(' ')[0]}</span>
                     <span className="text-[9px] uppercase bg-black/10 px-1 rounded flex-shrink-0 ml-1">{event.flightType}</span>
                 </div>
-                <div className="flex justify-between mt-1 items-center">
-                    <span className="font-mono text-[10px]">{event.aircraft}</span>
-                    <span className={`px-1 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ${
-                        event.status === 'Completed' ? 'bg-green-500 text-white' : 
-                        event.status === 'Cancelled' ? 'bg-red-500 text-white' : 
-                        'bg-white/20 text-white'
-                    }`}>{event.status}</span>
-                </div>
                 {event.weatherVerdict && (
                     <div className={`mt-1 text-[9px] font-bold uppercase inline-block px-1 rounded w-fit ${
                         event.weatherVerdict === 'GO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
@@ -381,54 +350,8 @@ export default function FlyingSlotsRoot() {
             </div>
         );
 
-        const CustomTimeSlot = ({ children }) => {
-            return React.cloneElement(children, {
-                className: `${children.props.className || ''} group relative cursor-pointer`,
-                children: (
-                    <>
-                        {children.props.children}
-                        <div className="custom-add-slot-btn absolute inset-0 flex items-center justify-center pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity z-10">
-                            <span className="text-[9px] font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded border border-green-100 dark:border-green-800/50">
-                                + Add Slot
-                            </span>
-                        </div>
-                    </>
-                )
-            });
-        };
-
         return (
             <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4 sm:p-6 h-full min-h-[600px] flex flex-col">
-                <style>{`
-                  .rbc-calendar {
-                    min-height: 500px;
-                    flex: 1;
-                    font-family: inherit;
-                  }
-                  .rbc-toolbar button {
-                    color: inherit;
-                  }
-                  .rbc-toolbar button.rbc-active {
-                    background-color: #e5e7eb;
-                    color: #111827;
-                  }
-                  .dark .rbc-toolbar button.rbc-active {
-                    background-color: #374151;
-                    color: #f9fafb;
-                  }
-                  .dark .rbc-month-view, .dark .rbc-time-view, .dark .rbc-header, .dark .rbc-day-bg, .dark .rbc-timeslot-group, .dark .rbc-time-content {
-                    border-color: #374151;
-                  }
-                  .dark .rbc-off-range-bg {
-                    background-color: #1f2937;
-                  }
-                  .dark .rbc-today {
-                    background-color: #111827;
-                  }
-                  .rbc-time-gutter .custom-add-slot-btn {
-                    display: none !important;
-                  }
-                `}</style>
                 <DnDCalendar
                     localizer={localizer}
                     events={events}
@@ -442,23 +365,12 @@ export default function FlyingSlotsRoot() {
                     onEventDrop={handleEventUpdate}
                     onEventResize={handleEventUpdate}
                     resizable
-                    onNavigate={(newDate) => {
-                        const tzOffset = newDate.getTimezoneOffset() * 60000;
-                        const localISOTime = (new Date(newDate - tzOffset)).toISOString().slice(0, -1);
-                        setSelectedDate(localISOTime.split('T')[0]);
-                    }}
+                    onNavigate={(newDate) => setSelectedDate(newDate.toISOString().split('T')[0])}
                     selectable
                     onSelectSlot={(slotInfo) => {
-                        const startDate = slotInfo.start;
-                        const endDate = slotInfo.end;
-                        
-                        const tzOffset = startDate.getTimezoneOffset() * 60000;
-                        const localISOStart = (new Date(startDate - tzOffset)).toISOString().slice(0, -1);
-                        const localISOEnd = (new Date(endDate - tzOffset)).toISOString().slice(0, -1);
-                        
-                        const dateStr = localISOStart.split('T')[0];
-                        const timeStr = localISOStart.split('T')[1].substring(0, 5);
-                        const endTimeStr = localISOEnd.split('T')[1].substring(0, 5);
+                        const dateStr = slotInfo.start.toISOString().split('T')[0];
+                        const timeStr = slotInfo.start.toTimeString().substring(0, 5);
+                        const endTimeStr = slotInfo.end.toTimeString().substring(0, 5);
                         
                         setFormData({ 
                             ...formData, 
@@ -471,270 +383,254 @@ export default function FlyingSlotsRoot() {
                     }}
                     onSelectEvent={(event) => handleOpenModal(event)}
                     components={{
-                        event: CustomEvent,
-                        timeSlotWrapper: CustomTimeSlot
+                        event: CustomEvent
                     }}
-                    eventPropGetter={(event) => {
-                        let bgColor = '#3b82f6';
-                        if (event.status === 'Completed') bgColor = '#22c55e';
-                        if (event.status === 'Cancelled') bgColor = '#ef4444';
-                        return {
-                            style: {
-                                backgroundColor: bgColor,
-                                border: 'none',
-                                borderRadius: '6px',
-                                color: 'white',
-                                padding: '0',
-                                overflow: 'hidden'
-                            }
-                        };
-                    }}
+                    eventPropGetter={(event) => ({
+                        style: {
+                            backgroundColor: event.status === 'Completed' ? '#22c55e' : event.status === 'Cancelled' ? '#ef4444' : '#3b82f6',
+                            borderRadius: '6px',
+                            color: 'white',
+                            border: 'none'
+                        }
+                    })}
                 />
+            </div>
+        );
+    };
+
+    const renderTimeline = () => {
+        const hours = Array.from({ length: 15 }, (_, i) => i + 6); // 6 AM to 8 PM
+        const dailySlots = slots.filter(s => s.date === selectedDate);
+
+        return (
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 flex flex-col p-4 sm:p-6 overflow-hidden">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Daily Timeline</h2>
+                    <input 
+                        type="date" 
+                        value={selectedDate} 
+                        onChange={(e) => setSelectedDate(e.target.value)} 
+                        className="border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white py-2 px-3 border" 
+                    />
+                </div>
+                
+                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-16 pl-6 space-y-0 pb-12">
+                        {hours.map(hour => {
+                            const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+                            const startingHere = dailySlots.filter(s => parseInt(s.startTime.split(':')[0]) === hour);
+                            const isActiveOccupied = dailySlots.some(s => {
+                                const startH = parseInt(s.startTime.split(':')[0]);
+                                const endH = s.endTime ? parseInt(s.endTime.split(':')[0]) : startH + 1;
+                                return hour >= startH && hour < endH;
+                            });
+
+                            return (
+                                <div key={hour} className="relative py-4 border-t border-dashed border-gray-100 dark:border-gray-700/50">
+                                    <div className="absolute -left-[5.5rem] top-3 w-16 text-right text-sm font-bold text-gray-500 dark:text-gray-400">
+                                        {timeStr}
+                                    </div>
+                                    <div className={`absolute -left-[1.65rem] top-4 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-800 ${isActiveOccupied ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                                    <div className="min-h-[2.5rem] flex flex-col gap-3">
+                                        {!isActiveOccupied && (
+                                            <div className="text-sm text-green-600 dark:text-green-400/80 font-medium italic opacity-70 py-1 hover:opacity-100 transition-opacity flex items-center gap-2 cursor-pointer" onClick={() => {
+                                                setFormData({ ...formData, date: selectedDate, startTime: timeStr, endTime: `${(hour+2).toString().padStart(2, '0')}:00` });
+                                                setEditId(null);
+                                                setIsModalOpen(true);
+                                            }}>
+                                                + Available
+                                            </div>
+                                        )}
+                                        {startingHere.map(slot => (
+                                            <div key={slot.id} onClick={() => handleOpenModal(slot)} className={`p-4 rounded-xl cursor-pointer border shadow-sm ${slot.status === 'Completed' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : slot.status === 'Cancelled' ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'} transition-all hover:scale-[1.01] hover:shadow-md relative overflow-hidden`}>
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <div className="font-bold text-gray-900 dark:text-white">{slot.startTime} - {slot.endTime}</div>
+                                                        <div className="text-sm font-medium">{slot.student} w/ {slot.instructor}</div>
+                                                        <div className="text-xs text-gray-500 mt-1 font-mono">{slot.aircraft}</div>
+                                                    </div>
+                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold border ${getStatusStyles(slot.status)}`}>
+                                                        {slot.status}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
         );
     };
 
     return (
         <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 rounded-xl">
-            {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-gray-200 dark:border-gray-700 pb-5">
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Flying Slots</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage flight schedules, instructors, and student bookings.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage flight schedules and bookings.</p>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3 items-center">
-                    {/* View Toggle */}
-                    <div className="flex bg-gray-200 dark:bg-gray-800 p-1 rounded-lg w-full sm:w-auto">
-                        <button 
-                            onClick={() => setViewMode('list')} 
-                            className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-700'}`}
-                        >
-                            List View
-                        </button>
-                        <button 
-                            onClick={() => setViewMode('calendar')} 
-                            className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${viewMode === 'calendar' ? 'bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-700'}`}
-                        >
-                            Calendar
-                        </button>
+                <div className="flex flex-wrap gap-3 items-center">
+                    <div className="flex bg-gray-200 dark:bg-gray-800 p-1 rounded-lg">
+                        {['list', 'calendar', 'timeline'].map(mode => (
+                            <button 
+                                key={mode}
+                                onClick={() => setViewMode(mode)} 
+                                className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${viewMode === mode ? 'bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}
+                            >
+                                {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                            </button>
+                        ))}
                     </div>
-
-                    {viewMode === 'list' && (
-                        <div className="relative w-full sm:w-56">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="Search slots..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="block w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg leading-5 bg-white dark:bg-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm text-gray-900 dark:text-white"
-                            />
-                        </div>
-                    )}
-                    
-                    <button
-                        onClick={() => handleOpenModal()}
-                        className="inline-flex w-full sm:w-auto items-center justify-center px-4 py-2 border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                    >
-                        <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-                        Add Slot
-                    </button>
-
-                    <button
-                        onClick={handleSyncWeather}
-                        disabled={syncing}
-                        className="inline-flex w-full sm:w-auto items-center justify-center px-4 py-2 border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-                    >
-                        {syncing ? '⏳ Syncing...' : '🔄 Sync Weather'}
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Search slots..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                        />
+                    </div>
+                    <button onClick={() => handleOpenModal()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors">+ Add Slot</button>
+                    <button onClick={handleSyncWeather} disabled={syncing} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg disabled:opacity-50 transition-colors">
+                        {syncing ? 'Syncing...' : 'Sync Weather'}
                     </button>
                 </div>
             </div>
 
-            {/* Main Content Area */}
-            {viewMode === 'list' ? renderList() : renderCalendar()}
+            {viewMode === 'list' && renderList()}
+            {viewMode === 'calendar' && renderCalendar()}
+            {viewMode === 'timeline' && renderTimeline()}
 
-            {/* Weather Schedules Section */}
-            {schedules.length > 0 && (
-                <div className="mt-6">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                        <span>🌤️</span> Weather-Checked Schedules
-                    </h2>
-                    <div className="space-y-3">
-                        {schedules.map(slot => (
-                            <div key={slot.id} className={`relative bg-white dark:bg-gray-800 rounded-xl p-5 border shadow-sm ${slot.status === 'CANCELLED' ? 'border-red-300 dark:border-red-800' : 'border-gray-200 dark:border-gray-700'}`}>
-                                <div className="flex flex-wrap justify-between items-start gap-4">
-                                    <div className="flex gap-4">
-                                        <div className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center font-bold text-xs ${slot.status === 'CANCELLED' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'}`}>
-                                            <span>{new Date(slot.startTime).toLocaleDateString(undefined, { month: 'short' })}</span>
-                                            <span className="text-lg leading-none">{new Date(slot.startTime).toLocaleDateString(undefined, { day: '2-digit' })}</span>
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-lg text-gray-900 dark:text-white">{slot.traineeName || 'Trainee #' + slot.traineeId}</h3>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">with {slot.instructorName || 'Instructor'} • {slot.aircraftId}</p>
-                                            <div className="flex items-center gap-2 mt-2">
-                                                <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full font-bold text-gray-700 dark:text-gray-300">
-                                                    {new Date(slot.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(slot.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                                <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase ${slot.status === 'CANCELLED' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
-                                                    {slot.status}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => handleDeleteSchedule(slot.id)} className="text-gray-400 hover:text-red-500 transition-colors p-2">🗑️</button>
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl my-8 border border-gray-200 dark:border-gray-700">
+                        <h2 className="text-2xl font-bold mb-6 border-b pb-4 dark:border-gray-700">{editId ? 'Edit Flying Slot' : 'Schedule Flying Slot'}</h2>
+                        <div className="space-y-5">
+                            <div className="grid grid-cols-2 gap-5">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Date *</label>
+                                    <input type="date" name="date" value={formData.date} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" required />
                                 </div>
-                                {slot.weatherVerdict && (
-                                    <div className={`mt-4 p-4 rounded-xl text-sm ${slot.weatherVerdict === 'GO' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'}`}>
-                                        <div className="font-bold flex items-center gap-1.5 mb-1">{slot.weatherVerdict === 'GO' ? '✅ Weather: GO' : '❌ Weather: NO-GO'}</div>
-                                        {slot.cancellationReason && <p className="opacity-90">{slot.cancellationReason}</p>}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Start *</label>
+                                        <input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" required />
                                     </div>
-                                )}
-                                {slot.extremeWeatherWarning && (
-                                    <div className="mt-2 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm font-medium animate-pulse">
-                                        {slot.extremeWeatherWarning}
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">End</label>
+                                        <input type="time" name="endTime" value={formData.endTime} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" />
                                     </div>
-                                )}
+                                </div>
                             </div>
-                        ))}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Instructor *</label>
+                                <select 
+                                    name="instructor" 
+                                    value={`${formData.instructor}|${formData.instructorId}`} 
+                                    onChange={(e) => {
+                                        const [name, id] = e.target.value.split('|');
+                                        setFormData(prev => ({ ...prev, instructor: name, instructorId: id }));
+                                    }} 
+                                    className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
+                                    required
+                                >
+                                    <option value="">Select Instructor</option>
+                                    {instructors.map(i => {
+                                        const fullName = i.user ? `${i.user.firstName} ${i.user.lastName}` : (i.name || 'Unknown');
+                                        return (
+                                            <option key={i.id} value={`${fullName}|${i.id}`}>
+                                                {fullName}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Student *</label>
+                                <select 
+                                    name="student" 
+                                    value={`${formData.student}|${formData.traineeId}`} 
+                                    onChange={(e) => {
+                                        const [name, id] = e.target.value.split('|');
+                                        setFormData(prev => ({ ...prev, student: name, traineeId: id }));
+                                    }} 
+                                    className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
+                                    required
+                                >
+                                    <option value="">Select Student</option>
+                                    {students.map(s => (
+                                        <option key={s.id} value={`${s.firstName} ${s.lastName}|${s.id}`}>
+                                            {s.firstName} {s.lastName} ({s.studentId})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Aircraft *</label>
+                                    <select 
+                                        name="aircraft" 
+                                        value={formData.aircraft} 
+                                        onChange={(e) => setFormData(prev => ({ ...prev, aircraft: e.target.value }))} 
+                                        className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
+                                        required
+                                    >
+                                        <option value="">Select Aircraft</option>
+                                        {aircraftList.map(a => (
+                                            <option key={a.id} value={a.id}>{a.tailNumber || a.id} - {a.model}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Flight Type</label>
+                                    <select name="flightType" value={formData.flightType} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border">
+                                        <option value="Dual">Dual</option>
+                                        <option value="Solo">Solo</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                                    <select name="status" value={formData.status} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border">
+                                        <option value="Scheduled">Scheduled</option>
+                                        <option value="Completed">Completed</option>
+                                        <option value="Cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 mt-8 border-t pt-5 dark:border-gray-700">
+                                <button onClick={handleCloseModal} className="px-5 py-2.5 text-gray-500 font-bold hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Cancel</button>
+                                <button onClick={handleSave} className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25">Save Slot</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
-
-            {/* Modal */}
-            {isModalOpen && (
-                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                        {/* Background overlay */}
-                        <div className="fixed inset-0 bg-gray-900 bg-opacity-75 dark:bg-black dark:bg-opacity-80 transition-opacity backdrop-blur-sm" aria-hidden="true" onClick={handleCloseModal}></div>
-
-                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-                        {/* Modal Panel */}
-                        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-xl sm:w-full border border-gray-200 dark:border-gray-700">
-                            <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                                <div className="sm:flex sm:items-start">
-                                    <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                                        <h3 className="text-2xl leading-6 font-extrabold text-gray-900 dark:text-white mb-6 border-b pb-4 dark:border-gray-700" id="modal-title">
-                                            {editId ? 'Edit Flying Slot' : 'Schedule Flying Slot'}
-                                        </h3>
-                                        <div className="space-y-5">
-                                            <div className="grid grid-cols-2 gap-5">
-                                                <div>
-                                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Date *</label>
-                                                    <input type="date" name="date" value={formData.date} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" required />
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Start *</label>
-                                                        <input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" required />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">End</label>
-                                                        <input type="time" name="endTime" value={formData.endTime} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Instructor *</label>
-                                                <select 
-                                                    name="instructor" 
-                                                    value={`${formData.instructor}|${formData.instructorId}`} 
-                                                    onChange={(e) => {
-                                                        const [name, id] = e.target.value.split('|');
-                                                        setFormData(prev => ({ ...prev, instructor: name, instructorId: id }));
-                                                    }} 
-                                                    className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
-                                                    required
-                                                >
-                                                    <option value="">Select Instructor</option>
-                                                    {instructors.map(i => {
-                                                        const fullName = i.user ? `${i.user.firstName} ${i.user.lastName}` : (i.name || 'Unknown');
-                                                        return (
-                                                            <option key={i.id} value={`${fullName}|${i.id}`}>
-                                                                {fullName}
-                                                            </option>
-                                                        );
-                                                    })}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Student *</label>
-                                                <select 
-                                                    name="student" 
-                                                    value={`${formData.student}|${formData.traineeId}`} 
-                                                    onChange={(e) => {
-                                                        const [name, id] = e.target.value.split('|');
-                                                        setFormData(prev => ({ ...prev, student: name, traineeId: id }));
-                                                    }} 
-                                                    className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
-                                                    required
-                                                >
-                                                    <option value="">Select Student</option>
-                                                    {students.map(s => (
-                                                        <option key={s.id} value={`${s.firstName} ${s.lastName}|${s.id}`}>
-                                                            {s.firstName} {s.lastName} ({s.studentId})
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                                <div>
-                                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Aircraft *</label>
-                                                    <select 
-                                                        name="aircraft" 
-                                                        value={formData.aircraft} 
-                                                        onChange={(e) => setFormData(prev => ({ ...prev, aircraft: e.target.value }))} 
-                                                        className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
-                                                        required
-                                                    >
-                                                        <option value="">Select Aircraft</option>
-                                                        {aircraftList.map(a => (
-                                                            <option key={a.id} value={a.id}>{a.tailNumber || a.id} - {a.model}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Flight Type</label>
-                                                    <select name="flightType" value={formData.flightType} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border">
-                                                        <option value="Dual">Dual</option>
-                                                        <option value="Solo">Solo</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                                                    <select name="status" value={formData.status} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border">
-                                                        <option value="Scheduled">Scheduled</option>
-                                                        <option value="Completed">Completed</option>
-                                                        <option value="Cancelled">Cancelled</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
+            
+            {/* Weather Detail Section */}
+            {schedules.length > 0 && viewMode === 'list' && (
+                <div className="mt-8 pt-8 border-t dark:border-gray-700">
+                    <h2 className="text-xl font-bold mb-4">Recent Weather Verdicts</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {schedules.filter(s => s.weatherVerdict).slice(0, 6).map(slot => (
+                            <div key={slot.id} className={`p-4 rounded-xl border ${slot.weatherVerdict === 'GO' ? 'border-green-200 bg-green-50 dark:bg-green-900/10' : 'border-red-200 bg-red-50 dark:bg-red-900/10'}`}>
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <div className="font-bold text-gray-900 dark:text-white">{slot.traineeName}</div>
+                                        <div className="text-xs opacity-75">{new Date(slot.startTime).toLocaleString()}</div>
+                                    </div>
+                                    <div className={`font-black uppercase text-sm ${slot.weatherVerdict === 'GO' ? 'text-green-600' : 'text-red-600'}`}>
+                                        {slot.weatherVerdict}
                                     </div>
                                 </div>
+                                {slot.extremeWeatherWarning && <div className="text-xs mt-2 text-red-500 font-medium italic">⚠️ {slot.extremeWeatherWarning}</div>}
+                                <button onClick={() => handleDeleteSchedule(slot.id)} className="mt-3 text-[10px] text-gray-400 hover:text-red-500 uppercase tracking-widest font-bold transition-colors">Delete Record</button>
                             </div>
-                            <div className="bg-gray-50 dark:bg-gray-800/80 px-4 py-4 sm:px-6 flex flex-row-reverse gap-3 rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
-                                <button
-                                    type="button"
-                                    onClick={handleSave}
-                                    className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-5 py-2.5 bg-blue-600 text-base font-bold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
-                                >
-                                    Save Slot
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleCloseModal}
-                                    className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm px-5 py-2.5 bg-white dark:bg-gray-700 text-base font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 </div>
             )}
