@@ -343,27 +343,11 @@ export default function StudentForm() {
                   </button>
                </div>
               
-              <div className="space-y-4">
-                {form.documents.map((doc, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 relative group">
-                    <div className="md:col-span-5">
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Document Type</label>
-                      <input 
-                        value={doc.documentType} 
-                        onChange={(e) => {
-                          const newDocs = [...form.documents];
-                          newDocs[index].documentType = e.target.value;
-                          setForm({ ...form, documents: newDocs });
-                        }} 
-                        className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50" 
-                        placeholder="e.g. Scan of Passport"
-                      />
-              {/* Existing Documents */}
-              {form.documents.length > 0 && (
+              {form.documents.filter(d => d.id).length > 0 && (
                 <div className="mb-6 space-y-3">
                   <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Already Uploaded</h3>
-                  {form.documents.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-700 rounded-xl hover:shadow-sm transition-all duration-200 group">
+                  {form.documents.filter(d => d.id).map((doc, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-700 rounded-xl hover:shadow-sm transition-all duration-200 group">
                       <div className="flex items-center gap-3">
                         <FileText className="text-indigo-500" size={24} />
                         <div>
@@ -389,6 +373,25 @@ export default function StudentForm() {
                           <Trash2 size={18} />
                         </button>
                       )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="space-y-4">
+                {form.documents.map((doc, index) => (
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 relative group">
+                    <div className="md:col-span-5">
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Document Type</label>
+                      <input 
+                        value={doc.documentType} 
+                        onChange={(e) => {
+                          const newDocs = [...form.documents];
+                          newDocs[index].documentType = e.target.value;
+                          setForm({ ...form, documents: newDocs });
+                        }} 
+                        className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50" 
+                        placeholder="e.g. Scan of Passport"
+                      />
                     </div>
                     <div className="md:col-span-6">
                       <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Secure Link (URL)</label>
