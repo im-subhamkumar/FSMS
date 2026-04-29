@@ -1,6 +1,6 @@
 // ============================================================
-// Seed script — realistic, interlinked demo data for Invoice Module
-// Run: docker exec fsms_backend node prisma/seed-invoices.js
+// Seed script — realistic, interlinked demo data for Invoices & Report Dashboard
+// Run: docker exec fsms_backend node prisma/seed-t3.js
 //
 // Data flow: Course → PricingRate → InvoiceItem → Invoice
 //            Student → FlyingSlot (with Instructor + Aircraft)
@@ -10,7 +10,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding interlinked demo data for Invoice Module...\n');
+  console.log('Seeding interlinked demo data for Invoices & Report Dashboard...\n');
 
   // ── 1. Students ──────────────────────────────────────────
   const studentData = [
@@ -338,7 +338,7 @@ async function main() {
   }
   console.log(`  [6/6] Invoices seeded: ${billingPlan.length} (with ${billingPlan.reduce((s, b) => s + 1 + (b.flyHrs > 0 ? 2 : 0) + (['PPL-01','CPL-01'].includes(b.courseCode) ? 1 : 0), 0)} line items)`);
 
-  console.log('\nDone! Invoice Module now has realistic, interlinked data.');
+  console.log('\nDone! Invoices & Report Dashboard now have realistic, interlinked data.');
   console.log('  Courses → PricingRates → InvoiceItems → Invoices');
 }
 
