@@ -12,7 +12,7 @@ export default function FleetStatus() {
       fetch(`${API_URL}/maintenance/aircraft`)
         .then(res => res.json())
         .then(data => {
-          setFleetData(data);
+          setFleetData(Array.isArray(data) ? data : []);
           setLoading(false);
         })
         .catch(err => {
