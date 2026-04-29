@@ -1,11 +1,11 @@
-﻿import React, { useEffect, useState } from "react";
-import { getAircrafts, deleteAircraft } from "./AircraftData";
+import React, { useEffect, useState } from "react";
+import { getAircrafts, deleteAircraft } from "./AircraftData.jsx";
 import AircraftTable from "./AircraftTable";
 import EditAircraftModal from "./EditAircraftModal";
 import { useNavigate } from "react-router-dom";
 import { Plane, Plus, Search, CheckCircle, Wrench, AlertTriangle } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 export default function AircraftManager() {
   const [aircrafts, setAircrafts] = useState([]);

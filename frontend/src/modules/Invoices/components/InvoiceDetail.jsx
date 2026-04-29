@@ -1,13 +1,12 @@
 // T3 — InvoiceDetail ( invoiceNumber, amount, 3 statuses + react-to-print)
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
-import { ArrowLeft, Trash2, Printer, CheckCheck, AlertCircle, Clock, IndianRupee } from 'lucide-react';
+import { ArrowLeft, Trash2, Printer, CheckCheck, AlertCircle, Clock, IndianRupee, Edit2 } from 'lucide-react';
 import { useInvoices } from '../hooks/useInvoices';
 import StatusBadge from './StatusBadge';
 import PrintableInvoice from './PrintableInvoice';
 import RecordPaymentModal from './RecordPaymentModal';
-import { Edit2 } from 'lucide-react';
 
 const fmt     = (val) => new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(val) || 0);
 const fmtDate = (d)   => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -45,7 +44,7 @@ export default function InvoiceDetail() {
     documentTitle: invoice?.invoiceNumber || 'Invoice',
   });
 
-  const fetchInvoice = async () => {
+  const fetchInvoice = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getInvoice(id);
@@ -55,9 +54,9 @@ export default function InvoiceDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, getInvoice]);
 
-  useEffect(() => { fetchInvoice(); }, [id]);
+  useEffect(() => { fetchInvoice(); }, [fetchInvoice]);
 
   const handleAction = async (actionId) => {
     if (actionId === 'RECORD_PAYMENT') return setShowPaymentModal(true);
@@ -79,14 +78,10 @@ export default function InvoiceDetail() {
   };
 
   const handleRecordPayment = async (paymentData) => {
-    try {
-      await addPayment(id, paymentData);
-      await fetchInvoice();
-      setSuccessMessage('Payment recorded successfully!');
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      throw err;
-    }
+    await addPayment(id, paymentData);
+    await fetchInvoice();
+    setSuccessMessage('Payment recorded successfully!');
+    setTimeout(() => setSuccessMessage(null), 3000);
   };
 
   const handleDelete = async () => {

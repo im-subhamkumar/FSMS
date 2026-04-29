@@ -8,11 +8,11 @@ export default function FleetStatus() {
 
   useEffect(() => {
     const fetchData = () => {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
       fetch(`${API_URL}/maintenance/aircraft`)
         .then(res => res.json())
         .then(data => {
-          setFleetData(data);
+          setFleetData(Array.isArray(data) ? data : []);
           setLoading(false);
         })
         .catch(err => {

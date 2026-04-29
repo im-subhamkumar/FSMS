@@ -244,7 +244,7 @@ export function InstructorDetail() {
           <div className="flex items-end justify-between -mt-10 mb-4">
             <div className="relative">
               {instructor.profilePhotoUrl
-                ? <img src={`http://localhost:3000${instructor.profilePhotoUrl}`} alt={fullName} className="h-20 w-20 rounded-2xl border-4 border-white dark:border-gray-800 object-cover shadow-lg" />
+                ? <img src={`http://${window.location.hostname}:3000${instructor.profilePhotoUrl}`} alt={fullName} className="h-20 w-20 rounded-2xl border-4 border-white dark:border-gray-800 object-cover shadow-lg" />
                 : <div className="h-20 w-20 rounded-2xl border-4 border-white dark:border-gray-800 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">{initials}</div>
               }
               {instructor.employmentStatus === 'ACTIVE' && (

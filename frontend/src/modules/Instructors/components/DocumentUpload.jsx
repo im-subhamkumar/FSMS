@@ -214,7 +214,7 @@ export function DocumentUpload({ onUpload, documents = [], onDelete, isLoading =
                 <p className="text-sm font-semibold">{doc.label || doc.fileName}</p>
                 <p className="text-xs text-gray-500">{doc.category}</p>
               </div>
-              <a href={`http://localhost:3000${doc.fileUrl}`} target="_blank" rel="noreferrer">
+              <a href={`http://${window.location.hostname}:3000${doc.fileUrl}`} target="_blank" rel="noreferrer">
                 View
               </a>
               {onDelete && (

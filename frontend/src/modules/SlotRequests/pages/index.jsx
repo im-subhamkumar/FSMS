@@ -1,16 +1,14 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 export default function SlotRequestsRoot() {
     const [requests, setRequests] = useState([]);
     const [filter, setFilter] = useState('All'); // All, Pending, Approved, Rejected
 
-    useEffect(() => {
-        fetchRequests();
-    }, []);
-
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async () => {
         try {
-            const response = await fetch('http://localhost:3000/api/slot-requests');
+            const response = await fetch(`${API_BASE}/slot-requests`);
             if (response.ok) {
                 const data = await response.json();
                 setRequests(data);
@@ -18,11 +16,15 @@ export default function SlotRequestsRoot() {
         } catch (error) {
             console.error('Error fetching slot requests:', error);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchRequests();
+    }, [fetchRequests]);
 
     const handleUpdateStatus = async (id, newStatus) => {
         try {
-            const response = await fetch(`http://localhost:3000/api/slot-requests/${id}`, {
+            const response = await fetch(`${API_BASE}/slot-requests/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })

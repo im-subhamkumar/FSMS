@@ -1,9 +1,9 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AddManufacturerModal from "./AddManufacturerModal";
 import AddModelModal from "./AddModelModal";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 
 const AddAircraft = () => {

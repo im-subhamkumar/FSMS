@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ChevronLeft, Edit2, User, ShieldCheck, HeartPulse,
@@ -6,19 +6,17 @@ import {
   Globe, CreditCard, BookOpen, ExternalLink, Badge
 } from "lucide-react";
 
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
+
 export default function StudentProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchStudent();
-  }, [id]);
-
-  const fetchStudent = async () => {
+  const fetchStudent = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/students/${id}`);
+      const res = await fetch(`${API_BASE}/students/${id}`);
       const data = await res.json();
       setStudent(data);
     } catch (err) {
@@ -26,7 +24,11 @@ export default function StudentProfile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchStudent();
+  }, [id, fetchStudent]);
 
   if (loading) {
     return (

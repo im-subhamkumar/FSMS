@@ -1,21 +1,20 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup, LayersControl } from 'react-leaflet';
+import React, { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import axios from 'axios';
 
 export default function RadarMap({ lat, lon, stationId }) {
   const [frames, setFrames] = useState([]);
   const [currentFrameIdx, setCurrentFrameIdx] = useState(0);
-  const [animating, setAnimating] = useState(true);
   const [mapReady, setMapReady] = useState(false);
-  const [mapKey, setMapKey] = useState(Date.now());
-  const mapRef = useRef(null);
+  const [mapKey, setMapKey] = useState(() => Date.now());
+
 
   // Set mapReady after initial mount to avoid server/client mismatch
   // And update mapKey on unmount to appease React 18 Strict Mode
   useEffect(() => {
-    setMapReady(true);
+    const id = requestAnimationFrame(() => setMapReady(true));
     return () => {
+      cancelAnimationFrame(id);
       setMapReady(false);
       setMapKey(Date.now());
     };
@@ -40,15 +39,14 @@ export default function RadarMap({ lat, lon, stationId }) {
 
   useEffect(() => {
     let interval;
-    if (animating && frames.length > 1) {
+    if (frames.length > 1) {
       interval = setInterval(() => {
         setCurrentFrameIdx(prev => (prev + 1) % frames.length);
       }, 700);
     }
     return () => clearInterval(interval);
-  }, [animating, frames]);
+  }, [frames]);
 
-  const toggleAnimation = () => setAnimating(!animating);
 
   const currentFrame = frames[currentFrameIdx];
   const host = 'https://tilecache.rainviewer.com';

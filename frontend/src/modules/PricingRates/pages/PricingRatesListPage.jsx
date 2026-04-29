@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import PricingRateModal from '../components/PricingRateModal';
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') : `http://${window.location.hostname}:3000`;
 
 const CATEGORY_META = {
     AIRCRAFT_RENTAL: { label: 'Aircraft Rental',  color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',    icon: '✈️' },
