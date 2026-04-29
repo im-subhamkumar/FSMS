@@ -28,6 +28,9 @@ export default function AircraftManager() {
       if (Array.isArray(data)) {
         setAircrafts(data);
         setFilteredAircrafts(data);
+      } else if (data && Array.isArray(data.data)) {
+        setAircrafts(data.data);
+        setFilteredAircrafts(data.data);
       }
     } catch (e) {
       console.error(e);

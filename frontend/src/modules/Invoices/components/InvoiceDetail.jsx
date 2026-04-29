@@ -54,7 +54,8 @@ export default function InvoiceDetail() {
     } finally {
       setLoading(false);
     }
-  }, [id, getInvoice]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   useEffect(() => { fetchInvoice(); }, [fetchInvoice]);
 
