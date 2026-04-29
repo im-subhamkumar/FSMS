@@ -641,27 +641,13 @@ enum InvoiceStatus {
 }
 
 model Schedule {
-  id                 Int      @id @default(autoincrement())
-  traineeId          Int
-  traineeName        String?  @db.VarChar(200)
-  instructorId       Int
-  instructorName     String?  @db.VarChar(200)
-  aircraftId         String   @db.VarChar(50)
-  flightType         String   @default("Dual") @db.VarChar(50)
-  startTime          DateTime
-  endTime            DateTime
-  status             String   @default("SCHEDULED") // SCHEDULED, CANCELLED, COMPLETED
-  cancellationReason String?  @db.Text
-  weatherVerdict     String?  @db.VarChar(50) // GO, NO-GO
-  extremeWeatherWarning String? @db.Text
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
   id                    Int      @id @default(autoincrement())
   traineeId             Int
   traineeName           String?  @db.VarChar(200)
   instructorId          Int
   instructorName        String?  @db.VarChar(200)
   aircraftId            String   @db.VarChar(50)
+  flightType            String   @default("Dual") @db.VarChar(50)
   startTime             DateTime
   endTime               DateTime
   status                String   @default("SCHEDULED") // SCHEDULED, CANCELLED, COMPLETED
