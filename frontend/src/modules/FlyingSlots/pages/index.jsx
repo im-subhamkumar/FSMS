@@ -52,7 +52,6 @@ export default function FlyingSlotsRoot() {
 
     useEffect(() => {
         fetchSlots();
-        fetchSchedules();
         fetchDropdownData();
     }, []);
 
@@ -76,40 +75,12 @@ export default function FlyingSlotsRoot() {
         } catch (err) { console.error('Failed to fetch dropdown data:', err); }
     };
 
-    const fetchSchedules = async () => {
-        try {
-            const res = await fetch(`${API_BASE}/schedules`);
-            if (res.ok) {
-                const data = await res.json();
-                setSchedules(Array.isArray(data) ? data : []);
-            }
-        } catch (err) { console.error('Failed to fetch schedules:', err); }
-    };
-
-    const handleSyncWeather = async () => {
-        setSyncing(true);
-        try {
-            await fetch(`${API_BASE}/schedules/sync-weather`, { method: 'POST' });
-            await fetchSchedules();
-            fetchSlots();
-        } catch (err) { console.error(err); }
-        finally { setSyncing(false); }
-    };
-
-    const handleDeleteSchedule = async (id) => {
-        if (!window.confirm('Delete this weather schedule?')) return;
-        try {
-            await fetch(`${API_BASE}/schedules/${id}`, { method: 'DELETE' });
-            fetchSchedules();
-            fetchSlots();
-        } catch (err) { console.error(err); }
-    };
-
     const fetchSlots = async () => {
         try {
             const response = await fetch(`${API_BASE}/schedules`);
             if (response.ok) {
                 const data = await response.json();
+                setSchedules(data);
                 
                 const mappedSlots = data.map(s => {
                     const startDate = new Date(s.startTime);
@@ -138,11 +109,27 @@ export default function FlyingSlotsRoot() {
                 });
                 
                 setSlots(mappedSlots);
-                setSchedules(data);
             }
         } catch (error) {
             console.error('Error fetching slots:', error);
         }
+    };
+
+    const handleSyncWeather = async () => {
+        setSyncing(true);
+        try {
+            await fetch(`${API_BASE}/schedules/sync-weather`, { method: 'POST' });
+            fetchSlots();
+        } catch (err) { console.error(err); }
+        finally { setSyncing(false); }
+    };
+
+    const handleDeleteSchedule = async (id) => {
+        if (!window.confirm('Delete this weather schedule?')) return;
+        try {
+            await fetch(`${API_BASE}/schedules/${id}`, { method: 'DELETE' });
+            fetchSlots();
+        } catch (err) { console.error(err); }
     };
 
     const handleOpenModal = (slot = null) => {
@@ -194,7 +181,8 @@ export default function FlyingSlotsRoot() {
                 aircraftId: formData.aircraft,
                 flightType: formData.flightType,
                 startTime: startISO,
-                endTime: endISO
+                endTime: endISO,
+                status: formData.status.toUpperCase()
             };
 
             const url = editId ? `${API_BASE}/schedules/${editId}` : `${API_BASE}/schedules`;
@@ -209,7 +197,6 @@ export default function FlyingSlotsRoot() {
             if (response.ok) {
                 fetchSlots();
                 setTimeout(fetchSlots, 3000);
-                setTimeout(fetchSlots, 8000);
                 handleCloseModal();
             } else {
                 const errData = await response.json();
@@ -252,7 +239,8 @@ export default function FlyingSlotsRoot() {
                 aircraftId: event.aircraft,
                 flightType: event.flightType,
                 startTime: startISO,
-                endTime: endISO
+                endTime: endISO,
+                status: event.status.toUpperCase()
             };
 
             const response = await fetch(`${API_BASE}/schedules/${event.id}`, {
@@ -263,7 +251,6 @@ export default function FlyingSlotsRoot() {
 
             if (response.ok) {
                 fetchSlots();
-                setTimeout(fetchSlots, 3000);
             } else {
                 const errData = await response.json();
                 alert(errData.error || 'Failed to update slot timings.');
@@ -289,7 +276,7 @@ export default function FlyingSlotsRoot() {
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {filteredSlots.length > 0 ? (
                             filteredSlots.map((slot) => (
-                                <tr key={slot.id} onClick={() => handleOpenModal(slot)} className="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer" title="Click to edit">
+                                <tr key={slot.id} onClick={() => handleOpenModal(slot)} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer" title="Click to edit">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900 dark:text-white">{slot.date}</div>
                                         <div className="text-sm text-gray-500 dark:text-gray-400">{slot.startTime} - {slot.endTime}</div>
@@ -520,28 +507,28 @@ export default function FlyingSlotsRoot() {
             {viewMode === 'timeline' && renderTimeline()}
 
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-                        <h2 className="text-2xl font-bold mb-6">{editId ? 'Edit Slot' : 'Add Slot'}</h2>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl my-8 border border-gray-200 dark:border-gray-700">
+                        <h2 className="text-2xl font-bold mb-6 border-b pb-4 dark:border-gray-700">{editId ? 'Edit Flying Slot' : 'Schedule Flying Slot'}</h2>
+                        <div className="space-y-5">
+                            <div className="grid grid-cols-2 gap-5">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Date</label>
-                                    <input type="date" name="date" value={formData.date} onChange={handleInputChange} className="w-full p-2 border rounded dark:bg-gray-700" />
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Date *</label>
+                                    <input type="date" name="date" value={formData.date} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" required />
                                 </div>
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-sm font-medium mb-1">Start</label>
-                                        <input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} className="w-full p-2 border rounded dark:bg-gray-700" />
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Start *</label>
+                                        <input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" required />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium mb-1">End</label>
-                                        <input type="time" name="endTime" value={formData.endTime} onChange={handleInputChange} className="w-full p-2 border rounded dark:bg-gray-700" />
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">End</label>
+                                        <input type="time" name="endTime" value={formData.endTime} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" />
                                     </div>
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Instructor</label>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Instructor *</label>
                                 <select 
                                     name="instructor" 
                                     value={`${formData.instructor}|${formData.instructorId}`} 
@@ -549,18 +536,22 @@ export default function FlyingSlotsRoot() {
                                         const [name, id] = e.target.value.split('|');
                                         setFormData(prev => ({ ...prev, instructor: name, instructorId: id }));
                                     }} 
-                                    className="w-full p-2 border rounded dark:bg-gray-700"
+                                    className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
+                                    required
                                 >
                                     <option value="">Select Instructor</option>
-                                    {instructors.map(i => (
-                                        <option key={i.id} value={`${i.user?.firstName || i.name} ${i.user?.lastName || ''}|${i.id}`}>
-                                            {i.user?.firstName || i.name} {i.user?.lastName || ''}
-                                        </option>
-                                    ))}
+                                    {instructors.map(i => {
+                                        const fullName = i.user ? `${i.user.firstName} ${i.user.lastName}` : (i.name || 'Unknown');
+                                        return (
+                                            <option key={i.id} value={`${fullName}|${i.id}`}>
+                                                {fullName}
+                                            </option>
+                                        );
+                                    })}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Student</label>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Student *</label>
                                 <select 
                                     name="student" 
                                     value={`${formData.student}|${formData.traineeId}`} 
@@ -568,48 +559,76 @@ export default function FlyingSlotsRoot() {
                                         const [name, id] = e.target.value.split('|');
                                         setFormData(prev => ({ ...prev, student: name, traineeId: id }));
                                     }} 
-                                    className="w-full p-2 border rounded dark:bg-gray-700"
+                                    className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
+                                    required
                                 >
                                     <option value="">Select Student</option>
                                     {students.map(s => (
                                         <option key={s.id} value={`${s.firstName} ${s.lastName}|${s.id}`}>
-                                            {s.firstName} {s.lastName}
+                                            {s.firstName} {s.lastName} ({s.studentId})
                                         </option>
                                     ))}
                                 </select>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Aircraft</label>
-                                <select name="aircraft" value={formData.aircraft} onChange={handleInputChange} className="w-full p-2 border rounded dark:bg-gray-700">
-                                    <option value="">Select Aircraft</option>
-                                    {aircraftList.map(a => (
-                                        <option key={a.id} value={a.id}>{a.tailNumber} ({a.model})</option>
-                                    ))}
-                                </select>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Aircraft *</label>
+                                    <select 
+                                        name="aircraft" 
+                                        value={formData.aircraft} 
+                                        onChange={(e) => setFormData(prev => ({ ...prev, aircraft: e.target.value }))} 
+                                        className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
+                                        required
+                                    >
+                                        <option value="">Select Aircraft</option>
+                                        {aircraftList.map(a => (
+                                            <option key={a.id} value={a.id}>{a.tailNumber || a.id} - {a.model}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Flight Type</label>
+                                    <select name="flightType" value={formData.flightType} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border">
+                                        <option value="Dual">Dual</option>
+                                        <option value="Solo">Solo</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                                    <select name="status" value={formData.status} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border">
+                                        <option value="Scheduled">Scheduled</option>
+                                        <option value="Completed">Completed</option>
+                                        <option value="Cancelled">Cancelled</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div className="flex justify-end gap-3 mt-6">
-                                <button onClick={handleCloseModal} className="px-4 py-2 text-gray-500 font-bold">Cancel</button>
-                                <button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg">Save Slot</button>
+                            <div className="flex justify-end gap-3 mt-8 border-t pt-5 dark:border-gray-700">
+                                <button onClick={handleCloseModal} className="px-5 py-2.5 text-gray-500 font-bold hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Cancel</button>
+                                <button onClick={handleSave} className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25">Save Slot</button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
-
-            {/* Weather Schedules Detail Section */}
-            {schedules.length > 0 && (
+            
+            {/* Weather Detail Section */}
+            {schedules.length > 0 && viewMode === 'list' && (
                 <div className="mt-8 pt-8 border-t dark:border-gray-700">
-                    <h2 className="text-xl font-bold mb-4">Weather Checks</h2>
+                    <h2 className="text-xl font-bold mb-4">Recent Weather Verdicts</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {schedules.filter(s => s.weatherVerdict).map(slot => (
+                        {schedules.filter(s => s.weatherVerdict).slice(0, 6).map(slot => (
                             <div key={slot.id} className={`p-4 rounded-xl border ${slot.weatherVerdict === 'GO' ? 'border-green-200 bg-green-50 dark:bg-green-900/10' : 'border-red-200 bg-red-50 dark:bg-red-900/10'}`}>
-                                <div className="font-bold">{slot.traineeName}</div>
-                                <div className="text-sm opacity-75">{new Date(slot.startTime).toLocaleString()}</div>
-                                <div className={`mt-2 font-bold uppercase ${slot.weatherVerdict === 'GO' ? 'text-green-600' : 'text-red-600'}`}>
-                                    {slot.weatherVerdict}
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <div className="font-bold text-gray-900 dark:text-white">{slot.traineeName}</div>
+                                        <div className="text-xs opacity-75">{new Date(slot.startTime).toLocaleString()}</div>
+                                    </div>
+                                    <div className={`font-black uppercase text-sm ${slot.weatherVerdict === 'GO' ? 'text-green-600' : 'text-red-600'}`}>
+                                        {slot.weatherVerdict}
+                                    </div>
                                 </div>
-                                {slot.cancellationReason && <div className="text-xs mt-1 italic">{slot.cancellationReason}</div>}
-                                <button onClick={() => handleDeleteSchedule(slot.id)} className="mt-2 text-xs text-red-500 hover:underline">Remove</button>
+                                {slot.extremeWeatherWarning && <div className="text-xs mt-2 text-red-500 font-medium italic">⚠️ {slot.extremeWeatherWarning}</div>}
+                                <button onClick={() => handleDeleteSchedule(slot.id)} className="mt-3 text-[10px] text-gray-400 hover:text-red-500 uppercase tracking-widest font-bold transition-colors">Delete Record</button>
                             </div>
                         ))}
                     </div>

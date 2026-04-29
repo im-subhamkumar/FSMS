@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
   User, ShieldCheck, HeartPulse, FileText, Lock, 
@@ -151,7 +151,7 @@ export default function StudentForm() {
       case 4:
         return !!(form.schoolEmail && form.passwordHash);
       case 5:
-        return true; // Documents are optional but let's allow submission
+        return true; 
       default:
         return true;
     }
