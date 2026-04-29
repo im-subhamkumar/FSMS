@@ -79,7 +79,7 @@ export default function InvoiceForm() {
         setLoading(false);
       }
     })();
-  }, [id, isEdit]);
+  }, [id, isEdit, getInvoice]);
 
   const updateItem = (idx, field, value) => {
     setItems(prev => prev.map((item, i) =>

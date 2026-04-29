@@ -11,10 +11,6 @@ export default function RepairAssignment() {
   const [selectedAmeId, setSelectedAmeId] = useState(null);
   const [assigning, setAssigning] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = () => {
     const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
     setLoading(true);
@@ -38,6 +34,10 @@ export default function RepairAssignment() {
     });
   };
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const handleAssign = () => {
     if (!selectedAircraftId || !selectedAmeId) return;
     setAssigning(true);
@@ -49,7 +49,7 @@ export default function RepairAssignment() {
       body: JSON.stringify({ aircraftId: selectedAircraftId, ameId: selectedAmeId })
     })
     .then(res => res.json())
-    .then(data => {
+    .then(() => {
       setAssigning(false);
       setSelectedAircraftId(null);
       setSelectedAmeId(null);

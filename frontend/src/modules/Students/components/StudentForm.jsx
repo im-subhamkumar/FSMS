@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
   User, ShieldCheck, HeartPulse, FileText, Lock, 
@@ -74,7 +74,7 @@ export default function StudentForm() {
 
   const loadNextId = async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/students`);
+      const res = await fetch(`${API_BASE}/students`);
       const students = await res.json();
       
       let nextNumber = 1;
@@ -151,8 +151,7 @@ export default function StudentForm() {
       case 4:
         return !!(form.schoolEmail && form.passwordHash);
       case 5:
-        if (!form.documents || form.documents.length === 0) return false;
-        return form.documents.every(doc => doc.documentType && doc.fileUrl);
+        return true; 
       default:
         return true;
     }
@@ -163,16 +162,12 @@ export default function StudentForm() {
     if (validateStep(step)) {
       setStep(s => s + 1);
     } else {
-      alert("Please fill all fields in this section before proceeding.");
+      alert("Please fill all required fields in this section before proceeding.");
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateStep(5)) {
-      alert("Please ensure at least one document is added and all document fields are filled.");
-      return;
-    }
     setIsSubmitting(true);
 
     const url = isEdit
@@ -182,16 +177,17 @@ export default function StudentForm() {
     const method = isEdit ? "PUT" : "POST";
 
     try {
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
       });
+      
       const data = await res.json();
-
       const newStudentId = isEdit ? id : data.id;
 
-      // Upload newly added files seamlessly
+      // Upload newly added files
+      const validPendingFiles = pendingFiles.filter(f => f.file);
       if (validPendingFiles.length > 0) {
         let uploadErrors = 0;
         await Promise.all(validPendingFiles.map(async (pf) => {
@@ -214,7 +210,7 @@ export default function StudentForm() {
         }));
 
         if (uploadErrors > 0) {
-          alert(`Student profile saved, but ${uploadErrors} document(s) failed to upload. Please edit the student to re-upload them.`);
+          alert(`Student profile saved, but ${uploadErrors} document(s) failed to upload.`);
         }
       }
 
@@ -336,48 +332,83 @@ export default function StudentForm() {
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white">Supporting Documents</h2>
                   <button 
                     type="button" 
-                    onClick={() => setForm(prev => ({ ...prev, documents: [...prev.documents, { documentType: "", fileUrl: "" }] }))}
+                    onClick={() => setPendingFiles([...pendingFiles, { type: "", file: null }])}
                     className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-sm font-semibold rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
                   >
                     <Plus size={16} /> Add Document
                   </button>
                </div>
               
+              {/* Existing Documents */}
+              {form.documents.length > 0 && (
+                <div className="mb-6 space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Already Uploaded</h3>
+                  {form.documents.map((doc, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-700 rounded-xl hover:shadow-sm transition-all duration-200 group">
+                      <div className="flex items-center gap-3">
+                        <FileText className="text-indigo-500" size={24} />
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{doc.documentType || 'Document'} <span className="text-xs font-normal text-slate-500 ml-2">Stored File</span></p>
+                          <a href={doc.fileUrl.startsWith('http') ? doc.fileUrl : `http://${window.location.hostname}:3000${doc.fileUrl}`} target="_blank" rel="noreferrer" className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 group-hover:underline">View Original File</a>
+                        </div>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={async () => {
+                          if (!window.confirm("Permanently delete this document?")) return;
+                          try {
+                            if (doc.id) {
+                              await fetch(`${API_BASE}/students/${id}/documents/${doc.id}`, { method: 'DELETE' });
+                            }
+                            setForm(prev => ({ ...prev, documents: prev.documents.filter((_, i) => i !== index) }));
+                          } catch (e) {
+                            console.error(e);
+                          }
+                        }}
+                        className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg opacity-60 group-hover:opacity-100 transition-all"
+                        title="Delete Stored Document"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pending New Documents */}
               <div className="space-y-4">
-                {form.documents.map((doc, index) => (
+                {pendingFiles.map((pf, index) => (
                   <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 relative group">
                     <div className="md:col-span-5">
                       <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Document Type</label>
                       <input 
-                        value={doc.documentType} 
+                        value={pf.type} 
                         onChange={(e) => {
-                          const newDocs = [...form.documents];
-                          newDocs[index].documentType = e.target.value;
-                          setForm({ ...form, documents: newDocs });
+                          const newPending = [...pendingFiles];
+                          newPending[index].type = e.target.value;
+                          setPendingFiles(newPending);
                         }} 
                         className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50" 
                         placeholder="e.g. Scan of Passport"
                       />
                     </div>
                     <div className="md:col-span-6">
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Secure Link (URL)</label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Select File</label>
                       <input 
-                        value={doc.fileUrl} 
+                        type="file"
                         onChange={(e) => {
-                          const newDocs = [...form.documents];
-                          newDocs[index].fileUrl = e.target.value;
-                          setForm({ ...form, documents: newDocs });
+                          const newPending = [...pendingFiles];
+                          newPending[index].file = e.target.files[0];
+                          setPendingFiles(newPending);
                         }} 
                         className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-indigo-600 dark:text-indigo-400" 
-                        placeholder="https://storage.provider.com/file..."
                       />
                     </div>
                     <div className="md:col-span-1 flex justify-end">
                       <button 
                         type="button" 
                         onClick={() => {
-                          const newDocs = form.documents.filter((_, i) => i !== index);
-                          setForm({ ...form, documents: newDocs });
+                          setPendingFiles(pendingFiles.filter((_, i) => i !== index));
                         }}
                         className="p-2.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
                         title="Remove Document"
@@ -388,7 +419,7 @@ export default function StudentForm() {
                   </div>
                 ))}
                 
-                {form.documents.length === 0 && (
+                {pendingFiles.length === 0 && form.documents.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-10 px-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
                     <FileText size={32} className="text-slate-300 dark:text-slate-600 mb-3" />
                     <p className="text-slate-500 dark:text-slate-400 text-sm mb-1 font-medium">No documents attached</p>

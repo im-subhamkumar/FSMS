@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, History, Download, UploadCloud, FileText, Calendar, ShieldCheck, AlertCircle, Clock, Eye } from 'lucide-react';
 import { useDocumentStore } from '../../../store/documentStore';
 
-export const DocumentDetailsModal = ({ isOpen, onClose, document, onUploadNewVersion }) => {
+export default function DocumentDetailsModal({ isOpen, onClose, document, onUploadNewVersion }) {
     const [mounted, setMounted] = useState(false);
     const { fetchDocumentVersions, documentVersions, isLoading } = useDocumentStore();
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, BookOpen, AlertCircle, Loader2 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000`;
+const API_BASE = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') : `http://${window.location.hostname}:3000`;
 
 const LEVELS = [
     { value: 'SPL', label: 'Student Pilot License (SPL)' },

@@ -57,6 +57,7 @@ export default function InvoiceList() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchData(); }, [statusFilter, fromDate, toDate]);
 
   // Reset page when filters change
