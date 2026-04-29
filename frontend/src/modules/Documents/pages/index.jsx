@@ -1,76 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { FileText, Search, Plus, Trash2, Download, AlertCircle, Clock, History, File, ShieldCheck, FileSearch } from 'lucide-react';
-import { useDocumentStore } from '../../../store/documentStore';
-import { useDocumentCategoryStore } from '../../../store/documentCategoryStore';
-import { UploadModal } from '../components/UploadModal';
-import { DocumentDetailsModal } from '../components/DocumentDetailsModal';
+import React from 'react';
 
 export default function DocumentsRoot() {
-    const { documents, fetchDocuments, deleteDocument, isLoading } = useDocumentStore();
-    const { categories, fetchCategories } = useDocumentCategoryStore();
-    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [categoryIdFilter, setCategoryIdFilter] = useState('');
-    const [selectedDocument, setSelectedDocument] = useState(null);
-    const [documentToUpdate, setDocumentToUpdate] = useState(null);
-
-    useEffect(() => {
-        fetchDocuments();
-        fetchCategories();
-    }, [fetchDocuments, fetchCategories]);
-
-    const filteredDocuments = documents.filter(doc => {
-        const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                              doc.category?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = categoryIdFilter ? doc.categoryId.toString() === categoryIdFilter.toString() : true;
-        return matchesSearch && matchesCategory;
-    });
-
-    const getStatusStyle = (doc) => {
-        if (doc.status === 'EXPIRED') return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800/50';
-        const warningDays = doc.category?.warningThresholdDays || 30;
-        if (doc.expiryDate && new Date(doc.expiryDate) < new Date(Date.now() + warningDays * 24 * 60 * 60 * 1000)) {
-            return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50';
-        }
-        return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50';
-    };
-
-    const getStatusText = (doc) => {
-        if (doc.status === 'EXPIRED') return 'Expired';
-        const warningDays = doc.category?.warningThresholdDays || 30;
-        if (doc.expiryDate && new Date(doc.expiryDate) < new Date(Date.now() + warningDays * 24 * 60 * 60 * 1000)) {
-            return 'Expiring Soon';
-        }
-        return 'Valid';
-    };
-
-    const StatusIcon = ({ doc, className }) => {
-        if (doc.status === 'EXPIRED') return <AlertCircle className={className} />;
-        const warningDays = doc.category?.warningThresholdDays || 30;
-        if (doc.expiryDate && new Date(doc.expiryDate) < new Date(Date.now() + warningDays * 24 * 60 * 60 * 1000)) {
-            return <Clock className={className} />;
-        }
-        return <ShieldCheck className={className} />;
-    };
-
     return (
-        <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-300">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Document Library</h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">Manage and track all organizational documents.</p>
-                </div>
-                <button 
-                    onClick={() => {
-                        setDocumentToUpdate(null);
-                        setIsUploadModalOpen(true);
-                    }}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm shadow-blue-600/20 active:scale-95"
-                >
-                    <Plus className="w-5 h-5" />
-                    Upload Document
-                </button>
+        <div className="flex flex-col h-full">
+            <h1 className="text-2xl font-bold mb-4">D oc um en ts</h1>
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 flex items-center justify-center">
+                <p className="text-gray-500 dark:text-gray-400 text-lg">
+                    This is the D oc um en ts module placeholder.
+                </p>
             </div>
 
             {/* Controls */}

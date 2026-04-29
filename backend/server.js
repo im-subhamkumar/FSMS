@@ -8,7 +8,6 @@ import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -42,8 +41,6 @@ app.use(express.json());
 // Parse URL-encoded bodies (form submissions)
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // Serve uploaded files as static assets
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -129,8 +126,8 @@ app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
 });
 
-// Global error handler — must have exactly 4 params for Express to treat as error handler
-app.use((err, req, res, next) => {
+// Global error handler
+app.use((err, _req, res, _next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error', details: err.message });
 });

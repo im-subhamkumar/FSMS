@@ -14,10 +14,6 @@ export default function StudentProfile() {
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchStudent();
-  }, [id, fetchStudent]);
-
   const fetchStudent = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/students/${id}`);
@@ -29,6 +25,10 @@ export default function StudentProfile() {
       setLoading(false);
     }
   }, [id]);
+
+  useEffect(() => {
+    fetchStudent();
+  }, [id, fetchStudent]);
 
   if (loading) {
     return (

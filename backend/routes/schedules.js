@@ -59,16 +59,16 @@ async function checkWeatherForSchedule(schedule) {
         const updateData = {
             weatherVerdict: gonogo.verdict,
             extremeWeatherWarning: extremeWarning,
-            status: gonogo.verdict === 'GO' ? 'SCHEDULED' : 'CANCELLED'
+            status: gonogo.verdict === 'GO' ? 'SCHEDULED' : 'AWAITING'
         };
 
         if (gonogo.verdict === 'NO-GO' || extremeWarning) {
-            updateData.status = 'CANCELLED';
+            updateData.status = 'AWAITING';
             updateData.cancellationReason = [
                 ...(gonogo.reasons || []),
                 extremeWarning
             ].filter(Boolean).join(' | ');
-            console.log(`[SAFETY] AUTO-CANCELLING slot due to: ${updateData.cancellationReason}`);
+            console.log(`[SAFETY] Weather issue detected. Holding slot in AWAITING status due to: ${updateData.cancellationReason}`);
         }
 
         const updated = await prisma.schedule.update({
@@ -100,7 +100,7 @@ router.get('/', async (req, res) => {
 
 // Create a schedule
 router.post('/', async (req, res) => {
-    const { traineeId, traineeName, instructorId, instructorName, aircraftId, startTime, endTime } = req.body;
+    const { traineeId, traineeName, instructorId, instructorName, aircraftId, flightType, startTime, endTime } = req.body;
     
     if (!startTime || !endTime) {
         return res.status(400).json({ error: 'Starts and Ends times are required.' });
@@ -114,6 +114,24 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Invalid date format provided.' });
         }
 
+        // Conflict Detection
+        const conflict = await prisma.schedule.findFirst({
+            where: {
+                status: { not: 'CANCELLED' },
+                startTime: { lt: end },
+                endTime: { gt: start },
+                OR: [
+                    { traineeId: parseInt(traineeId) || 1 },
+                    { instructorId: parseInt(instructorId) || 1 },
+                    { aircraftId: aircraftId || 'VT-ACC' }
+                ]
+            }
+        });
+
+        if (conflict) {
+            return res.status(409).json({ error: 'A slot is already booked in that time. Please select another time.' });
+        }
+
         const schedule = await prisma.schedule.create({
             data: {
                 traineeId: parseInt(traineeId) || 1,
@@ -121,6 +139,7 @@ router.post('/', async (req, res) => {
                 instructorId: parseInt(instructorId) || 1,
                 instructorName: instructorName || 'Alice Instructor',
                 aircraftId: aircraftId || 'VT-ACC',
+                flightType: flightType || 'Dual',
                 startTime: start,
                 endTime: end,
                 status: 'AWAITING'
@@ -153,6 +172,71 @@ router.post('/sync-weather', async (req, res) => {
         
         res.json({ message: 'Sync complete', updatedCount: results.length, data: results });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update a schedule
+router.put('/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const { traineeId, traineeName, instructorId, instructorName, aircraftId, flightType, startTime, endTime, status } = req.body;
+    
+    try {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({ error: 'Invalid date format provided.' });
+        }
+
+        // Conflict Detection
+        const conflict = await prisma.schedule.findFirst({
+            where: {
+                id: { not: id },
+                status: { not: 'CANCELLED' },
+                startTime: { lt: end },
+                endTime: { gt: start },
+                OR: [
+                    { traineeId: parseInt(traineeId) || 1 },
+                    { instructorId: parseInt(instructorId) || 1 },
+                    { aircraftId: aircraftId || 'VT-ACC' }
+                ]
+            }
+        });
+
+        if (conflict) {
+            return res.status(409).json({ error: 'A slot is already booked in that time. Please select another time.' });
+        }
+
+        const updateData = {
+            traineeId: parseInt(traineeId) || 1,
+            traineeName: traineeName || 'John Trainee',
+            instructorId: parseInt(instructorId) || 1,
+            instructorName: instructorName || 'Alice Instructor',
+            aircraftId: aircraftId || 'VT-ACC',
+            flightType: flightType || 'Dual',
+            startTime: start,
+            endTime: end
+        };
+
+        if (status) {
+             updateData.status = status;
+        } else {
+             // If resaving without status, default to AWAITING so weather check can run
+             updateData.status = 'AWAITING';
+        }
+
+        const updated = await prisma.schedule.update({
+            where: { id },
+            data: updateData
+        });
+        
+        console.log(`[SCHEDULE] Updated slot ID ${updated.id}. Starting background weather check...`);
+        checkWeatherForSchedule(updated).catch(err => console.error(`[BACKGROUND-SAFETY] Failed for ID ${updated.id}:`, err));
+        
+        res.json(updated);
+    } catch (err) {
+        console.error('[SCHEDULE] Update failed:', err);
         res.status(500).json({ error: err.message });
     }
 });
