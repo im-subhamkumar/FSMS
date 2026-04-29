@@ -367,7 +367,7 @@ const AddAircraft = () => {
           onClick={() => navigate("/aircraft")}
           className="text-sm text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
         >
-          ΓåÉ Back
+          {'<-'} Back
         </button>
         <h1 className="text-2xl font-bold">Add New Aircraft</h1>
       </div>
@@ -375,11 +375,11 @@ const AddAircraft = () => {
       {/* Wizard Progress */}
       <div className="flex space-x-2 mb-8 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-xl items-center text-sm font-medium">
         <div className={`px-4 py-2 rounded-lg ${step === 1 ? 'bg-blue-600 text-white' : 'text-gray-400'}`}>1. Basic Info</div>
-        <span className="text-slate-400 dark:text-gray-600">ßÉ│</span>
+        <span className="text-slate-400 dark:text-gray-600">{'->'}</span>
         <div className={`px-4 py-2 rounded-lg ${step === 2 ? 'bg-blue-600 text-white' : 'text-gray-400'}`}>2. Performance</div>
-        <span className="text-slate-400 dark:text-gray-600">ßÉ│</span>
+        <span className="text-slate-400 dark:text-gray-600">{'->'}</span>
         <div className={`px-4 py-2 rounded-lg ${step === 3 ? 'bg-blue-600 text-white' : 'text-gray-400'}`}>3. Maintenance</div>
-        <span className="text-slate-400 dark:text-gray-600">ßÉ│</span>
+        <span className="text-slate-400 dark:text-gray-600">{'->'}</span>
         <div className={`px-4 py-2 rounded-lg ${step === 4 ? 'bg-blue-600 text-white' : 'text-gray-400'}`}>4. Operational</div>
       </div>
 
