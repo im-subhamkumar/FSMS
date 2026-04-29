@@ -12,6 +12,9 @@ COPY package.json package-lock.json ./
 # Install all dependencies (including devDependencies for Vite)
 RUN npm install --legacy-peer-deps
 
+# Force-install packages that have React 19 peer dependency conflicts
+RUN npm install react-to-print react-leaflet leaflet recharts --force
+
 # Copy the rest of the source code
 # NOTE: node_modules is excluded via .dockerignore
 COPY . .
