@@ -13,8 +13,9 @@ export default function DispatchBoardRoot() {
     const [slots, setSlots] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [flightTypeFilter, setFlightTypeFilter] = useState('ALL');
     const [isLoading, setIsLoading] = useState(true);
-    const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
+    const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     const [interventionMode, setInterventionMode] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [weather, setWeather] = useState(null);
@@ -25,15 +26,15 @@ export default function DispatchBoardRoot() {
     useEffect(() => {
         fetchSlots();
         fetchWeather();
-        
-        // Update time every minute
+
+        // Update time every second for absolute real-time status shifts
         const timer = setInterval(() => {
-            setCurrentTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
-        }, 60000);
+            setCurrentTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        }, 1000);
 
         // Update weather every 5 minutes
         const weatherTimer = setInterval(fetchWeather, 300000);
-        
+
         return () => {
             clearInterval(timer);
             clearInterval(weatherTimer);
@@ -59,12 +60,37 @@ export default function DispatchBoardRoot() {
     const fetchSlots = async () => {
         try {
             setIsLoading(true);
-            const response = await fetch('http://localhost:3000/api/slots');
+            const response = await fetch('http://localhost:3000/api/schedules');
             const data = await response.json();
 
             if (Array.isArray(data)) {
+                // Map the Schedule model data to the format used by the UI
+                const mappedData = data.map(s => {
+                    const startDate = new Date(s.startTime);
+                    const endDate = new Date(s.endTime);
+
+                    const localDate = `${startDate.getFullYear()}-${(startDate.getMonth() + 1).toString().padStart(2, '0')}-${startDate.getDate().toString().padStart(2, '0')}`;
+                    const localStartTime = `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`;
+                    const localEndTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+
+                    return {
+                        id: s.id,
+                        date: localDate,
+                        startTime: localStartTime,
+                        endTime: localEndTime,
+                        student: s.traineeName || `Trainee #${s.traineeId}`,
+                        instructor: s.instructorName || `Instructor #${s.instructorId}`,
+                        aircraft: s.aircraftId,
+                        flightType: s.flightType || 'Dual',
+                        status: s.status,
+                        notes: s.cancellationReason || '',
+                        weatherVerdict: s.weatherVerdict,
+                        extremeWeatherWarning: s.extremeWeatherWarning
+                    };
+                });
+
                 // Sort by time
-                const sorted = data.sort((a, b) => a.startTime.localeCompare(b.startTime));
+                const sorted = mappedData.sort((a, b) => a.startTime.localeCompare(b.startTime));
                 setSlots(sorted);
             } else {
                 setSlots([]);
@@ -80,12 +106,17 @@ export default function DispatchBoardRoot() {
     const handleAbortMission = async (slotId, reason) => {
         try {
             setIsProcessing(true);
-            const response = await fetch(`http://localhost:3000/api/slots/${slotId}`, {
-                method: 'PATCH',
+            // Get the current slot to preserve other fields for PUT request
+            const slot = slots.find(s => s.id === slotId);
+            if (!slot) return;
+
+            const response = await fetch(`http://localhost:3000/api/schedules/${slotId}`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
+                    ...slot,
                     status: 'CANCELLED',
-                    notes: `MISSION ABORTED: ${reason}. (Logged: ${currentTime})`
+                    cancellationReason: `MISSION ABORTED: ${reason}. (Logged: ${currentTime})`
                 })
             });
             if (response.ok) {
@@ -104,15 +135,18 @@ export default function DispatchBoardRoot() {
         const rawStatus = (slot.status || "SCHEDULED").toUpperCase();
         if (rawStatus === 'CANCELLED' || rawStatus === 'COMPLETED') return rawStatus;
 
-        // Check for Emergency in notes
+        // Check for Emergency in notes (High Priority)
         if (slot.notes?.toUpperCase().includes('EMERGENCY')) return 'EMERGENCY';
 
         const isToday = slot.date === todayDate;
         const isPastDate = slot.date < todayDate;
-        const isPastTimeToday = isToday && currentTime > slot.endTime;
-        const isFlightInAir = isToday && currentTime >= slot.startTime && currentTime <= slot.endTime;
+        
+        // Use only HH:mm for comparison with slot times
+        const timeForComparison = currentTime.substring(0, 5);
+        const isPastTimeToday = isToday && timeForComparison > slot.endTime;
+        const isFlightInAir = isToday && timeForComparison >= slot.startTime && timeForComparison <= slot.endTime;
 
-        if (isPastDate || isPastTimeToday) return 'OVERDUE';
+        if (isPastDate || isPastTimeToday) return 'COMPLETED';
         if (isFlightInAir) return 'AIRBORNE';
 
         return 'SCHEDULED';
@@ -125,7 +159,7 @@ export default function DispatchBoardRoot() {
 
         return {
             total: todaySlots.length,
-            scheduled: processedSlots.filter(s => s.effectiveStatus === 'SCHEDULED').length,
+            scheduled: processedSlots.filter(s => s.effectiveStatus === 'SCHEDULED' || s.effectiveStatus === 'AWAITING').length,
             airborne: processedSlots.filter(s => s.effectiveStatus === 'AIRBORNE').length,
             completed: processedSlots.filter(s => s.effectiveStatus === 'COMPLETED').length,
             overdue: processedSlots.filter(s => s.effectiveStatus === 'OVERDUE').length,
@@ -142,15 +176,16 @@ export default function DispatchBoardRoot() {
             (slot.student || "").toLowerCase().includes(query) ||
             (slot.instructor || "").toLowerCase().includes(query) ||
             (slot.aircraft || "").toLowerCase().includes(query) ||
-            (slot.status || "").toLowerCase().includes(query)
+            (slot.status || "").toLowerCase().includes(query) ||
+            (slot.flightType || "").toLowerCase().includes(query)
         );
 
         const effectiveStatus = getSlotEffectiveStatus(slot);
 
-        let matchesStatus = statusFilter === 'ALL' || statusFilter === effectiveStatus;
-        if (statusFilter === 'SCHEDULED' && effectiveStatus !== 'SCHEDULED') matchesStatus = false;
+        const matchesStatus = statusFilter === 'ALL' || statusFilter === effectiveStatus;
+        const matchesFlightType = flightTypeFilter === 'ALL' || (slot.flightType || 'Dual').toUpperCase() === flightTypeFilter;
 
-        return matchesSearch && matchesStatus;
+        return matchesSearch && matchesStatus && matchesFlightType;
     });
 
     return (
@@ -162,11 +197,7 @@ export default function DispatchBoardRoot() {
                         <PlaneTakeoff className="text-indigo-500" size={32} />
                         {view === 'LIVE' ? 'Dispatch Operations' : 'Flight Archives'}
                     </h1>
-                    <p className="mt-1 text-slate-500 dark:text-slate-400 font-medium">
-                        {view === 'LIVE'
-                            ? "Real-time command center for today's flight missions"
-                            : "Review historic flight logs and performance records"}
-                    </p>
+
                 </div>
 
                 <div className="flex items-center gap-3 w-full md:w-auto">
@@ -174,8 +205,8 @@ export default function DispatchBoardRoot() {
                     <button
                         onClick={() => setView(view === 'LIVE' ? 'HISTORY' : 'LIVE')}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm border ${view === 'LIVE'
-                                ? 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-                                : 'bg-indigo-600 text-white border-indigo-500 hover:bg-indigo-700 shadow-indigo-500/20'
+                            ? 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                            : 'bg-indigo-600 text-white border-indigo-500 hover:bg-indigo-700 shadow-indigo-500/20'
                             }`}
                     >
                         {view === 'LIVE' ? <History size={18} /> : <LayoutDashboard size={18} />}
@@ -183,11 +214,19 @@ export default function DispatchBoardRoot() {
                     </button>
 
                     {view === 'LIVE' && (
-                        <div className="hidden sm:flex px-5 py-2.5 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl border border-indigo-100 dark:border-indigo-500/20 items-center gap-2">
-                            <Calendar size={18} className="text-indigo-500" />
-                            <span className="text-sm font-bold text-indigo-700 dark:text-indigo-400">
-                                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </span>
+                        <div className="hidden sm:flex items-center gap-4">
+                            <div className="px-5 py-2.5 bg-slate-900 dark:bg-indigo-500/10 rounded-xl border border-slate-700 dark:border-indigo-500/20 flex items-center gap-3">
+                                <Clock size={18} className="text-indigo-400 animate-pulse" />
+                                <span className="text-sm font-mono font-black text-white dark:text-indigo-400 tracking-wider">
+                                    {currentTime}
+                                </span>
+                            </div>
+                            <div className="px-5 py-2.5 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl border border-indigo-100 dark:border-indigo-500/20 flex items-center gap-2">
+                                <Calendar size={18} className="text-indigo-500" />
+                                <span className="text-sm font-bold text-indigo-700 dark:text-indigo-400">
+                                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </span>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -198,7 +237,7 @@ export default function DispatchBoardRoot() {
             )}
 
             {view === 'HISTORY' ? (
-                <DispatchHistory />
+                <DispatchHistory currentTime={currentTime} todayDate={todayDate} />
             ) : (
                 <>
                     {/* SUMMARY STATS */}
@@ -207,39 +246,39 @@ export default function DispatchBoardRoot() {
                             icon={<Plane size={20} className="text-blue-600 dark:text-blue-400" />}
                             label="Today's Total"
                             value={stats.total}
-                            bg="bg-blue-50 dark:bg-blue-500/10"
+                            color="blue"
                         />
                         <StatCard
                             icon={<PlaneTakeoff size={20} className="text-indigo-600 dark:text-indigo-400" />}
                             label="Airborne"
                             value={stats.airborne}
-                            bg="bg-indigo-50 dark:bg-indigo-500/10"
+                            color="indigo"
                             alert={stats.airborne > 0}
                         />
                         <StatCard
                             icon={<Clock size={20} className="text-amber-600 dark:text-amber-400" />}
                             label="On Ground"
                             value={stats.scheduled}
-                            bg="bg-amber-50 dark:bg-amber-500/10"
+                            color="amber"
                         />
                         <StatCard
                             icon={<CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400" />}
                             label="Completed"
                             value={stats.completed}
-                            bg="bg-emerald-50 dark:bg-emerald-500/10"
+                            color="emerald"
                         />
                         <StatCard
                             icon={<AlertCircle size={20} className="text-rose-600 dark:text-rose-400" />}
                             label="Overdue / Risk"
                             value={stats.overdue}
-                            bg="bg-rose-50 dark:bg-rose-500/10"
+                            color="rose"
                             alert={stats.overdue > 0}
                         />
                         <StatCard
                             icon={<XCircle size={20} className="text-slate-600 dark:text-slate-400" />}
                             label="Cancelled"
                             value={stats.cancelled}
-                            bg="bg-slate-50 dark:bg-slate-500/10"
+                            color="slate"
                         />
                     </div>
 
@@ -257,33 +296,33 @@ export default function DispatchBoardRoot() {
                                 />
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
-                                <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-700 w-full xl:w-auto overflow-hidden">
-                                    {[
-                                        { id: 'ALL', label: 'All', count: stats.total },
-                                        { id: 'AIRBORNE', label: 'Airborne', count: stats.airborne },
-                                        { id: 'OVERDUE', label: 'Overdue', count: stats.overdue },
-                                        { id: 'SCHEDULED', label: 'On Ground', count: stats.scheduled },
-                                        { id: 'COMPLETED', label: 'Completed', count: stats.completed },
-                                        { id: 'CANCELLED', label: 'Cancelled', count: stats.cancelled }
-                                    ].map((tab) => (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setStatusFilter(tab.id)}
-                                            className={`flex-1 xl:flex-none px-3 py-2 rounded-xl text-[11px] font-bold transition-all duration-200 flex items-center justify-center gap-2 whitespace-nowrap ${statusFilter === tab.id
-                                                    ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-md ring-1 ring-black/5 dark:ring-white/5'
-                                                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-800/50'
-                                                }`}
-                                        >
-                                            {tab.label}
-                                            <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${statusFilter === tab.id
-                                                    ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600'
-                                                    : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
-                                                }`}>
-                                                {tab.count}
-                                            </span>
-                                        </button>
-                                    ))}
+                            <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+                                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-2.5 rounded-2xl shadow-sm hover:border-indigo-500/50 transition-all group w-full sm:w-auto">
+                                    <Filter size={18} className="text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value)}
+                                        className="bg-transparent border-none text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 outline-none cursor-pointer w-full sm:w-40"
+                                    >
+                                        <option value="ALL">All Statuses ({stats.total})</option>
+                                        <option value="AIRBORNE">Airborne ({stats.airborne})</option>
+                                        <option value="SCHEDULED">Scheduled ({stats.scheduled})</option>
+                                        <option value="COMPLETED">Completed ({stats.completed})</option>
+                                        <option value="CANCELLED">Cancelled ({stats.cancelled})</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-2.5 rounded-2xl shadow-sm hover:border-blue-500/50 transition-all group w-full sm:w-auto">
+                                    <Plane size={18} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
+                                    <select
+                                        value={flightTypeFilter}
+                                        onChange={(e) => setFlightTypeFilter(e.target.value)}
+                                        className="bg-transparent border-none text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 outline-none cursor-pointer w-full sm:w-40"
+                                    >
+                                        <option value="ALL">All Flight Modes</option>
+                                        <option value="DUAL">Dual Instruction</option>
+                                        <option value="SOLO">Solo Operations</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -296,13 +335,14 @@ export default function DispatchBoardRoot() {
                                         <th className="px-6 py-4">Instructor</th>
                                         <th className="px-6 py-4">Student</th>
                                         <th className="px-6 py-4">Aircraft</th>
+                                        <th className="px-6 py-4">Mode</th>
                                         <th className="px-6 py-4">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                     {isLoading ? (
                                         <tr>
-                                            <td colSpan={5} className="py-20 text-center">
+                                            <td colSpan={6} className="py-20 text-center">
                                                 <div className="flex flex-col items-center gap-3">
                                                     <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
                                                     <span className="text-slate-500 font-medium">Syncing flight data...</span>
@@ -340,10 +380,18 @@ export default function DispatchBoardRoot() {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
+                                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${slot.flightType?.toUpperCase() === 'SOLO'
+                                                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                                                            : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
+                                                        }`}>
+                                                        {slot.flightType || 'Dual'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
                                                     <div className="flex items-center justify-between gap-4">
                                                         <StatusBadge status={getSlotEffectiveStatus(slot)} />
                                                         {(getSlotEffectiveStatus(slot) === 'AIRBORNE' || getSlotEffectiveStatus(slot) === 'OVERDUE' || getSlotEffectiveStatus(slot) === 'SCHEDULED') && (
-                                                            <button 
+                                                            <button
                                                                 onClick={() => setInterventionMode(slot)}
                                                                 className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                                                                 title="Emergency / Abort Mission"
@@ -357,7 +405,7 @@ export default function DispatchBoardRoot() {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={5} className="py-20 text-center text-slate-500 dark:text-slate-400">
+                                            <td colSpan={6} className="py-20 text-center text-slate-500 dark:text-slate-400">
                                                 <div className="flex flex-col items-center justify-center gap-4">
                                                     <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-full">
                                                         <LayoutDashboard size={40} className="text-slate-300 dark:text-slate-600" />
@@ -377,7 +425,7 @@ export default function DispatchBoardRoot() {
                 </>
             )}
 
-            {/* MISSION INTERVENTION MODAL */}
+            {/* PROBLEM DETAIL / CANCELLATION MODAL */}
             {interventionMode && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setInterventionMode(null)}></div>
@@ -388,41 +436,27 @@ export default function DispatchBoardRoot() {
                                     <AlertCircle size={24} />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-black uppercase tracking-tight">Mission Abort</h2>
-                                    <p className="text-sm font-bold text-slate-500 opacity-70 italic">Emergency / Change in Conditions</p>
+                                    <h2 className="text-xl font-black uppercase tracking-tight">Safety Alert</h2>
+                                    <p className="text-sm font-bold text-slate-500 opacity-70 italic">Operational Issues Detected</p>
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
-                                <label className="text-[10px] uppercase font-black tracking-widest text-slate-400">Select Reason for Abortion</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {['Weather Change', 'Technical Issue', 'ATC / Restricted', 'Medical / Pilot'].map((reason) => (
-                                        <button
-                                            key={reason}
-                                            onClick={() => handleAbortMission(interventionMode.id, reason)}
-                                            disabled={isProcessing}
-                                            className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:border-rose-500 hover:text-rose-500 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            {reason}
-                                        </button>
-                                    ))}
-                                </div>
+                            <div className="p-5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl">
+                                <label className="text-[10px] uppercase font-black tracking-widest text-slate-400 block mb-2">Detected Problem</label>
+                                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 leading-relaxed">
+                                    {interventionMode.notes || interventionMode.extremeWeatherWarning || (interventionMode.weatherVerdict === 'NO-GO' ? 'Adverse weather conditions detected for this slot.' : 'No specific discrepancy logged, but safety threshold reached.')}
+                                </p>
+                            </div>
+
+                            <div className="space-y-3 pt-2">
+
                                 <button
-                                    onClick={() => handleAbortMission(interventionMode.id, "EMERGENCY DECLARATION")}
-                                    disabled={isProcessing}
-                                    className="w-full py-4 mt-2 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-rose-600/20 transition-all flex items-center justify-center gap-3 animate-pulse"
+                                    onClick={() => setInterventionMode(null)}
+                                    className="w-full py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 rounded-2xl font-bold text-xs transition-all"
                                 >
-                                    <AlertCircle size={18} />
-                                    Declare Immediate Emergency
+                                    Close
                                 </button>
                             </div>
-
-                            <button 
-                                onClick={() => setInterventionMode(null)}
-                                className="w-full py-2 text-slate-400 font-bold text-xs hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                            >
-                                Cancel Dispatch Override
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -447,17 +481,16 @@ function WeatherStrip({ weather, isLoading }) {
     const isBadWeather = ['IFR', 'LIFR'].includes(weather?.flight_category?.toUpperCase());
 
     return (
-        <div className={`relative overflow-hidden rounded-3xl border transition-all duration-500 ${
-            isBadWeather 
-            ? 'bg-rose-600 border-rose-500 shadow-lg shadow-rose-600/20' 
-            : 'bg-white dark:bg-slate-800 border-slate-200/60 dark:border-slate-700'
-        }`}>
+        <div className={`relative overflow-hidden rounded-3xl border transition-all duration-500 ${isBadWeather
+                ? 'bg-rose-600 border-rose-500 shadow-lg shadow-rose-600/20'
+                : 'bg-white dark:bg-slate-800 border-blue-500/30 dark:border-blue-400/20 shadow-lg shadow-blue-500/5 hover:border-blue-500/50 transition-all duration-300'
+            }`}>
             {isLoading && (
                 <div className="absolute inset-0 bg-white/50 dark:bg-slate-800/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
                     <div className="w-4 h-4 border-2 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
                 </div>
             )}
-            
+
             <div className="px-6 py-4 flex flex-wrap items-center justify-between gap-6">
                 {/* Station & Status */}
                 <div className="flex items-center gap-4">
@@ -539,14 +572,43 @@ function WeatherStrip({ weather, isLoading }) {
     );
 }
 
-function StatCard({ icon, label, value, bg, alert }) {
+function StatCard({ icon, label, value, color, alert }) {
+    const colorMap = {
+        blue: {
+            bg: "bg-blue-50 dark:bg-blue-500/10",
+            hover: "hover:border-blue-500/50 hover:shadow-blue-500/10"
+        },
+        indigo: {
+            bg: "bg-indigo-50 dark:bg-indigo-500/10",
+            hover: "hover:border-indigo-500/50 hover:shadow-indigo-500/10"
+        },
+        amber: {
+            bg: "bg-amber-50 dark:bg-amber-500/10",
+            hover: "hover:border-amber-500/50 hover:shadow-amber-500/10"
+        },
+        emerald: {
+            bg: "bg-emerald-50 dark:bg-emerald-500/10",
+            hover: "hover:border-emerald-500/50 hover:shadow-emerald-500/10"
+        },
+        rose: {
+            bg: "bg-rose-50 dark:bg-rose-500/10",
+            hover: "hover:border-rose-500/50 hover:shadow-rose-500/10"
+        },
+        slate: {
+            bg: "bg-slate-50 dark:bg-slate-500/10",
+            hover: "hover:border-slate-500/50 hover:shadow-slate-500/10"
+        }
+    };
+
+    const style = colorMap[color] || colorMap.blue;
+
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-200/60 dark:border-slate-700 flex items-center gap-4 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-            <div className={`p-3 rounded-xl ${alert && label === 'Airborne' ? 'bg-indigo-100 dark:bg-indigo-500/20 animate-pulse ring-2 ring-indigo-500/50' : bg}`}>
+        <div className={`bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-200/60 dark:border-slate-700 flex items-center gap-4 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 cursor-default group ${style.hover}`}>
+            <div className={`p-3 rounded-xl transition-all duration-300 ${alert && label === 'Airborne' ? 'bg-indigo-100 dark:bg-indigo-500/20 animate-pulse ring-2 ring-indigo-500/50' : style.bg} group-hover:scale-110`}>
                 {icon}
             </div>
             <div>
-                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{label}</p>
+                <p className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">{label}</p>
                 <p className="text-xl font-black text-slate-900 dark:text-white mt-0.5">{value}</p>
             </div>
         </div>
@@ -564,7 +626,7 @@ function StatusBadge({ status }) {
     };
 
     const style = config[status] || config.SCHEDULED;
-    const label = status === 'AIRBORNE' ? 'Airborne' : status === 'SCHEDULED' ? 'On Ground' : status === 'COMPLETED' ? 'Completed' : status === 'CANCELLED' ? 'Cancelled' : status === 'OVERDUE' ? 'Overdue' : status === 'EMERGENCY' ? 'EMERGENCY' : status;
+    const label = status === 'AIRBORNE' ? 'Airborne' : status === 'SCHEDULED' ? 'Scheduled' : status === 'COMPLETED' ? 'Completed' : status === 'CANCELLED' ? 'Cancelled' : status === 'OVERDUE' ? 'Overdue' : status === 'EMERGENCY' ? 'EMERGENCY' : status;
 
     return (
         <span className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full border flex items-center gap-2 w-fit ${style}`}>

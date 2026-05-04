@@ -5,12 +5,13 @@ import {
     History, ChevronLeft, ChevronRight, Filter
 } from 'lucide-react';
 
-export function DispatchHistory() {
+export function DispatchHistory({ currentTime, todayDate }) {
     const [selectedDate, setSelectedDate] = useState('');
     const [slots, setSlots] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [flightTypeFilter, setFlightTypeFilter] = useState('ALL');
 
     useEffect(() => {
         fetchHistoricSlots();
@@ -19,19 +20,43 @@ export function DispatchHistory() {
     const fetchHistoricSlots = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch('http://localhost:3000/api/slots');
+            const response = await fetch('http://localhost:3000/api/schedules');
             const data = await response.json();
             if (Array.isArray(data)) {
-                let historicData = data;
+                // Map the Schedule model data to the format used by the UI
+                const mappedData = data.map(s => {
+                    const startDate = new Date(s.startTime);
+                    const endDate = new Date(s.endTime);
+                    
+                    const localDate = `${startDate.getFullYear()}-${(startDate.getMonth()+1).toString().padStart(2,'0')}-${startDate.getDate().toString().padStart(2,'0')}`;
+                    const localStartTime = `${startDate.getHours().toString().padStart(2,'0')}:${startDate.getMinutes().toString().padStart(2,'0')}`;
+                    const localEndTime = `${endDate.getHours().toString().padStart(2,'0')}:${endDate.getMinutes().toString().padStart(2,'0')}`;
+
+                    return {
+                        id: s.id,
+                        date: localDate,
+                        startTime: localStartTime,
+                        endTime: localEndTime,
+                        student: s.traineeName || `Trainee #${s.traineeId}`,
+                        instructor: s.instructorName || `Instructor #${s.instructorId}`,
+                        aircraft: s.aircraftId,
+                        flightType: s.flightType || 'Dual',
+                        status: s.status
+                    };
+                });
+
+                // Filter for historic data only (yesterday or older)
+                let historicData = mappedData.filter(s => s.date < effectiveTodayDate);
+                
                 if (selectedDate) {
-                    historicData = data.filter(s => s.date === selectedDate);
+                    historicData = historicData.filter(s => s.date === selectedDate);
                 }
                 // Sort by date descending, then time
                 const sorted = historicData.sort((a, b) => {
                     if (a.date !== b.date) {
-                        return (b.date || "").localeCompare(a.date || "");
+                        return (a.date || "").localeCompare(b.date || "");
                     }
-                    return (b.startTime || "").localeCompare(a.startTime || "");
+                    return (a.startTime || "").localeCompare(b.startTime || "");
                 });
                 setSlots(sorted);
             }
@@ -41,18 +66,32 @@ export function DispatchHistory() {
             setIsLoading(false);
         }
     };
-    const todayDate = new Date().toISOString().split('T')[0];
-    const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    // Use provided currentTime and todayDate from parent or fallback to current
+    const effectiveTodayDate = todayDate || new Date().toISOString().split('T')[0];
+    const effectiveCurrentTime = currentTime || new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+    const maxDate = useMemo(() => {
+        const d = new Date(effectiveTodayDate);
+        d.setDate(d.getDate() - 1);
+        return d.toISOString().split('T')[0];
+    }, [effectiveTodayDate]);
 
     // Helper to determine the effective status of a slot based on time
     const getSlotEffectiveStatus = (slot) => {
         const rawStatus = (slot.status || "SCHEDULED").toUpperCase();
         if (rawStatus === 'CANCELLED' || rawStatus === 'COMPLETED') return rawStatus;
 
-        const isPastDate = slot.date < todayDate;
-        const isPastTimeToday = slot.date === todayDate && currentTime > slot.endTime;
+        const isToday = slot.date === effectiveTodayDate;
+        const isPastDate = slot.date < effectiveTodayDate;
+        
+        // Use only HH:mm for comparison with slot times
+        const timeForComparison = effectiveCurrentTime.substring(0, 5);
+        const isPastTimeToday = isToday && timeForComparison > slot.endTime;
+        const isFlightInAir = isToday && timeForComparison >= slot.startTime && timeForComparison <= slot.endTime;
 
         if (isPastDate || isPastTimeToday) return 'COMPLETED';
+        if (isFlightInAir) return 'AIRBORNE';
+        
         return 'SCHEDULED';
     };
 
@@ -61,11 +100,14 @@ export function DispatchHistory() {
         const matchesSearch = (
             (slot.student || "").toLowerCase().includes(query) ||
             (slot.instructor || "").toLowerCase().includes(query) ||
-            (slot.aircraft || "").toLowerCase().includes(query)
+            (slot.aircraft || "").toLowerCase().includes(query) ||
+            (slot.flightType || "").toLowerCase().includes(query)
         );
         const effectiveStatus = getSlotEffectiveStatus(slot);
         const matchesStatus = statusFilter === 'ALL' || effectiveStatus === statusFilter;
-        return matchesSearch && matchesStatus;
+        const matchesFlightType = flightTypeFilter === 'ALL' || (slot.flightType || 'Dual').toUpperCase() === flightTypeFilter;
+        
+        return matchesSearch && matchesStatus && matchesFlightType;
     });
 
     return (
@@ -90,6 +132,7 @@ export function DispatchHistory() {
                                 type="date" 
                                 value={selectedDate}
                                 onChange={(e) => setSelectedDate(e.target.value)}
+                                max={maxDate}
                                 className="w-full pl-10 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                             />
                             {selectedDate && (
@@ -107,7 +150,7 @@ export function DispatchHistory() {
                         </div>
 
                         <div className="flex items-center gap-2 w-full sm:w-auto">
-                            <Filter size={16} className="text-slate-400 hidden sm:block" />
+                            <Filter size={16} className="text-indigo-500" />
                             <select 
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -116,7 +159,21 @@ export function DispatchHistory() {
                                 <option value="ALL">All Outcomes</option>
                                 <option value="COMPLETED">Completed</option>
                                 <option value="CANCELLED">Cancelled</option>
-                                <option value="SCHEDULED">Scheduled (Historic)</option>
+                                <option value="SCHEDULED">Scheduled</option>
+                                <option value="AIRBORNE">Airborne</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-2 w-full sm:w-auto border-l border-slate-200 dark:border-slate-700 pl-3">
+                            <Plane size={16} className="text-blue-500" />
+                            <select 
+                                value={flightTypeFilter}
+                                onChange={(e) => setFlightTypeFilter(e.target.value)}
+                                className="w-full sm:w-auto bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500/50 transition-all cursor-pointer"
+                            >
+                                <option value="ALL">All Modes</option>
+                                <option value="DUAL">Dual</option>
+                                <option value="SOLO">Solo</option>
                             </select>
                         </div>
                     </div>
@@ -131,13 +188,14 @@ export function DispatchHistory() {
                                 <th className="px-6 py-4">Instructor</th>
                                 <th className="px-6 py-4">Student</th>
                                 <th className="px-6 py-4">Aircraft</th>
+                                <th className="px-6 py-4">Mode</th>
                                 <th className="px-6 py-4 text-right">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={6} className="py-20 text-center">
+                                    <td colSpan={7} className="py-20 text-center">
                                         <div className="flex flex-col items-center gap-3">
                                             <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
                                             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Searching Archives...</span>
@@ -175,6 +233,15 @@ export function DispatchHistory() {
                                                 {slot.aircraft}
                                             </div>
                                         </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
+                                                slot.flightType?.toUpperCase() === 'SOLO' 
+                                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' 
+                                                : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
+                                            }`}>
+                                                {slot.flightType || 'Dual'}
+                                            </span>
+                                        </td>
                                         <td className="px-6 py-5 text-right whitespace-nowrap">
                                             <HistoryStatusBadge status={getSlotEffectiveStatus(slot)} />
                                         </td>
@@ -182,7 +249,7 @@ export function DispatchHistory() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="py-20 text-center">
+                                    <td colSpan={7} className="py-20 text-center">
                                         <div className="flex flex-col items-center gap-4 text-slate-400">
                                             <History size={48} className="opacity-20" />
                                             <p className="font-bold">No records found for this date</p>
@@ -200,16 +267,17 @@ export function DispatchHistory() {
 
 function HistoryStatusBadge({ status }) {
     const config = {
+        AIRBORNE: "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30 animate-pulse",
         COMPLETED: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
         CANCELLED: "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400",
         SCHEDULED: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
     };
 
     const style = config[status] || config.SCHEDULED;
-    const label = status === 'COMPLETED' ? 'Landed Safe' : status === 'CANCELLED' ? 'No-Go' : 'Pending/Skip';
+    const label = status === 'AIRBORNE' ? 'Airborne' : status === 'COMPLETED' ? 'Completed' : status === 'CANCELLED' ? 'Cancelled' : 'Scheduled';
 
     return (
-        <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg ${style}`}>
+        <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg border ${style} ${status === 'AIRBORNE' ? '' : 'border-transparent'}`}>
             {label}
         </span>
     );
