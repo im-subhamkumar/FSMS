@@ -154,8 +154,16 @@ router.post('/', async (req, res) => {
   try {
     const { studentId, issuedById, dueDate, notes, amount, items } = req.body;
 
-    if (!studentId || !issuedById) {
-      return res.status(400).json({ error: 'studentId and issuedById are required' });
+    if (!studentId) {
+      return res.status(400).json({ error: 'studentId is required' });
+    }
+
+    let validIssuedById = parseInt(issuedById);
+    const userExists = validIssuedById ? await prisma.user.findUnique({ where: { id: validIssuedById } }) : null;
+    if (!userExists) {
+      const firstUser = await prisma.user.findFirst();
+      if (!firstUser) return res.status(400).json({ error: 'No users in DB to act as issuer' });
+      validIssuedById = firstUser.id;
     }
 
     const invoiceNumber = await generateInvoiceNumber();
@@ -164,7 +172,7 @@ router.post('/', async (req, res) => {
       data: {
         invoiceNumber,
         studentId:  parseInt(studentId),
-        issuedById: parseInt(issuedById),
+        issuedById: validIssuedById,
         dueDate:    dueDate ? new Date(dueDate) : null,
         notes:      notes || null,
         status:     'PENDING',

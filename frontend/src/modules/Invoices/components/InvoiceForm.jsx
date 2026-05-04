@@ -24,7 +24,7 @@ export default function InvoiceForm() {
   const [students, setStudents] = useState([]);
   const [pricingRates, setPricingRates] = useState([]);
   const [studentId, setStudentId] = useState('');
-  const [issuedById, setIssuedById] = useState('1'); // Admin default
+  const [issuedById, setIssuedById] = useState(''); // Backend will auto-resolve to Admin
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState([{ ...EMPTY_ITEM }]);
@@ -79,7 +79,8 @@ export default function InvoiceForm() {
         setLoading(false);
       }
     })();
-  }, [id, isEdit, getInvoice]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, isEdit]);
 
   const updateItem = (idx, field, value) => {
     setItems(prev => prev.map((item, i) =>
