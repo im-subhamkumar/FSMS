@@ -5,14 +5,10 @@ export const useAppStore = create(
     persist(
         (set) => ({
     // User Session
-    user: {
-        id: 'I-26',
-        name: 'Tech Lead',
-        role: 'Admin',
-        avatar: 'https://ui-avatars.com/api/?name=Tech+Lead&background=0284c7&color=fff',
-    },
-    setUser: (user) => set({ user }),
-    logout: () => set({ user: null }),
+    user: null,
+    token: null,
+    login: (user, token) => set({ user, token }),
+    logout: () => set({ user: null, token: null }),
 
     // Notification System
     notifications: [
@@ -50,7 +46,7 @@ export const useAppStore = create(
         }),
         {
             name: 'fsms-global-storage',
-            partialize: (state) => ({ theme: state.theme, sidebarOpen: state.sidebarOpen, user: state.user }),
+            partialize: (state) => ({ theme: state.theme, sidebarOpen: state.sidebarOpen, user: state.user, token: state.token }),
         }
     )
 );

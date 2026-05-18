@@ -80,6 +80,9 @@ app.get('/', (req, res) => {
 // ──────────────────────────────────────────
 // Mount team module routers below
 // ──────────────────────────────────────────
+import authRouter from './routes/auth.js';
+app.use('/api/auth', authRouter);
+
 // Team Module Routers
 // ──────────────────────────────────────────
 import studentsRouter from './routes/students.js';

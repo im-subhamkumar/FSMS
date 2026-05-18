@@ -11,6 +11,24 @@ const AWC_BASE = 'https://aviationweather.gov/api/data';
 
 async function checkWeatherForSchedule(schedule) {
     console.log(`--- [SAFETY CHECK] Slot ID: ${schedule.id} ---`);
+
+    const now = new Date();
+    const slotTime = new Date(schedule.startTime);
+    const diffInHours = (slotTime - now) / (1000 * 60 * 60);
+
+    // If slot is more than 48 hours in the future, weather cannot be accurately predicted
+    if (diffInHours > 48) {
+        console.log(`[SAFETY] Slot is ${Math.round(diffInHours)}h away (>48h). Defaulting to GO.`);
+        return await prisma.schedule.update({
+            where: { id: schedule.id },
+            data: {
+                weatherVerdict: 'GO',
+                extremeWeatherWarning: null,
+                cancellationReason: null
+            }
+        });
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
@@ -59,16 +77,17 @@ async function checkWeatherForSchedule(schedule) {
         const updateData = {
             weatherVerdict: gonogo.verdict,
             extremeWeatherWarning: extremeWarning,
-            status: gonogo.verdict === 'GO' ? 'SCHEDULED' : 'AWAITING'
+            // Status stays SCHEDULED regardless — weatherVerdict badge shows GO/NO-GO
         };
 
         if (gonogo.verdict === 'NO-GO' || extremeWarning) {
-            updateData.status = 'AWAITING';
             updateData.cancellationReason = [
                 ...(gonogo.reasons || []),
                 extremeWarning
             ].filter(Boolean).join(' | ');
-            console.log(`[SAFETY] Weather issue detected. Holding slot in AWAITING status due to: ${updateData.cancellationReason}`);
+            console.log(`[SAFETY] Weather issue detected for ID ${schedule.id}: ${updateData.cancellationReason}`);
+        } else {
+            updateData.cancellationReason = null;
         }
 
         const updated = await prisma.schedule.update({
@@ -89,7 +108,17 @@ async function checkWeatherForSchedule(schedule) {
 // Get all schedules
 router.get('/', async (req, res) => {
     try {
+        const { traineeId, instructorId } = req.query;
+        let where = {};
+        if (traineeId) {
+            where.traineeId = parseInt(traineeId);
+        }
+        if (instructorId) {
+            where.instructorId = parseInt(instructorId);
+        }
+        
         const schedules = await prisma.schedule.findMany({
+            where,
             orderBy: { startTime: 'asc' }
         });
         res.json(schedules);
@@ -142,12 +171,12 @@ router.post('/', async (req, res) => {
                 flightType: flightType || 'Dual',
                 startTime: start,
                 endTime: end,
-                status: 'AWAITING'
+                status: 'SCHEDULED'
             }
         });
         
         console.log(`[SCHEDULE] Created slot ID ${schedule.id}. Starting background weather check...`);
-        // Start background weather check without awaiting, so UI sees 'AWAITING' status
+        // Weather check runs in background to update weatherVerdict badge only
         checkWeatherForSchedule(schedule).catch(err => console.error(`[BACKGROUND-SAFETY] Failed for ID ${schedule.id}:`, err));
         
         res.json(schedule);
@@ -161,7 +190,9 @@ router.post('/', async (req, res) => {
 router.post('/sync-weather', async (req, res) => {
     try {
         const activeSchedules = await prisma.schedule.findMany({
-            where: { status: 'SCHEDULED' }
+            where: { 
+                status: { in: ['SCHEDULED', 'AWAITING'] } 
+            }
         });
         
         const results = [];
@@ -231,8 +262,13 @@ router.put('/:id', async (req, res) => {
             data: updateData
         });
         
-        console.log(`[SCHEDULE] Updated slot ID ${updated.id}. Starting background weather check...`);
-        checkWeatherForSchedule(updated).catch(err => console.error(`[BACKGROUND-SAFETY] Failed for ID ${updated.id}:`, err));
+        // Do NOT run weather check if the slot was explicitly cancelled
+        if (updated.status !== 'CANCELLED') {
+            console.log(`[SCHEDULE] Updated slot ID ${updated.id}. Starting background weather check...`);
+            checkWeatherForSchedule(updated).catch(err => console.error(`[BACKGROUND-SAFETY] Failed for ID ${updated.id}:`, err));
+        } else {
+            console.log(`[SCHEDULE] Slot ID ${updated.id} cancelled — skipping weather check.`);
+        }
         
         res.json(updated);
     } catch (err) {
