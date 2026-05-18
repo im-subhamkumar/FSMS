@@ -17,7 +17,7 @@ const CARDS = [
 
 export default function InvoiceStats({ stats, loading, activeFilter, onFilterByStatus }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 mb-5">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
       {CARDS.map(card => {
         const Icon = card.icon;
         const value = stats?.[card.key];
@@ -31,8 +31,8 @@ export default function InvoiceStats({ stats, loading, activeFilter, onFilterByS
             key={card.key}
             onClick={() => isClickable && onFilterByStatus(isActive ? '' : card.filterStatus)}
             className={`
-              bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 flex flex-col gap-2
-              transition-all duration-300 hover:-translate-y-1 hover:shadow-xl
+              bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 flex flex-col gap-1.5
+              transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg
               ${card.hoverBorder} ${card.hoverShadow}
               ${isClickable ? 'cursor-pointer' : ''}
               ${isActive
@@ -44,9 +44,9 @@ export default function InvoiceStats({ stats, loading, activeFilter, onFilterByS
             <div className="flex items-center justify-between">
               <div className={`w-9 h-9 rounded-xl ${card.bg} flex items-center justify-center
                 ${(showPulse || showCountPulse) ? 'animate-pulse' : ''}
-                group-hover:scale-110 transition-transform duration-300
+                transition-transform duration-300
               `}>
-                <Icon className={`w-4.5 h-4.5 ${card.color}`} />
+                <Icon className={`w-4 h-4 ${card.color}`} />
               </div>
               {isClickable && (
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full transition-colors

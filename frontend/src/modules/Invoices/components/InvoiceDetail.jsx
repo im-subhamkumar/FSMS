@@ -116,11 +116,11 @@ export default function InvoiceDetail() {
   const balanceDue = parseFloat(invoice.amount || 0) - parseFloat(invoice.paidAmount || 0);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
 
       {/* Success toast banner */}
       {successMessage && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-sm font-semibold animate-pulse shadow-sm">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-sm font-semibold animate-pulse shadow-sm">
           <CheckCheck className="w-4 h-4" />
           {successMessage}
         </div>
@@ -133,21 +133,21 @@ export default function InvoiceDetail() {
 
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">
           Invoice Details
         </h1>
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Print / PDF — T10 bonus */}
           <button onClick={handlePrint}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <Printer className="w-4 h-4" /> Print / PDF
           </button>
 
           {/* Edit Invoice — only for PENDING */}
           {invoice.status === 'PENDING' && (
             <button onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               <Edit2 className="w-4 h-4" /> Edit
             </button>
           )}
@@ -155,7 +155,7 @@ export default function InvoiceDetail() {
           {/* Delete — only for PENDING */}
           {invoice.status === 'PENDING' && (
             <button onClick={() => setShowDeleteConfirm(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
               <Trash2 className="w-4 h-4" /> Delete
             </button>
           )}
@@ -166,7 +166,7 @@ export default function InvoiceDetail() {
             return (
               <button key={action.id} onClick={() => handleAction(action.id)}
                 disabled={actionLoading}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm disabled:opacity-60 ${action.color}`}>
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm disabled:opacity-60 ${action.color}`}>
                 <Icon className="w-4 h-4" />
                 {action.label}
               </button>
@@ -179,11 +179,11 @@ export default function InvoiceDetail() {
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
         {/* Header gradient band */}
-        <div className="px-6 py-5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div className="px-5 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Invoice</p>
-            <h2 className="text-3xl font-black font-mono text-gray-900 dark:text-white">{invoice.invoiceNumber}</h2>
-            <div className="mt-3"><StatusBadge status={invoice.status} size="lg" /></div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Invoice</p>
+            <h2 className="text-2xl font-black font-mono text-gray-900 dark:text-white">{invoice.invoiceNumber}</h2>
+            <div className="mt-2"><StatusBadge status={invoice.status} size="lg" /></div>
           </div>
           <div className="text-right space-y-1 text-sm">
             <p className="text-gray-500">Issued: <span className="font-bold text-gray-700 dark:text-gray-200">{fmtDate(invoice.issuedDate)}</span></p>
@@ -197,14 +197,14 @@ export default function InvoiceDetail() {
         </div>
 
         {/* Billed to */}
-        <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Billed To</p>
           <p className="text-lg font-bold text-gray-900 dark:text-white">{invoice.student?.firstName} {invoice.student?.lastName}</p>
           <p className="text-sm text-gray-400">{invoice.student?.email}</p>
         </div>
 
         {/* Line items */}
-        <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Line Items</p>
           {!invoice.items?.length ? (
             <p className="text-sm text-gray-400 italic">No line items.</p>
@@ -232,7 +232,7 @@ export default function InvoiceDetail() {
         </div>
 
         {/* Payments Ledger */}
-        <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/20">
+        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/20">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Payment History</p>
           {!invoice.payments?.length ? (
             <p className="text-sm text-gray-400 italic">No payments recorded.</p>
@@ -263,7 +263,7 @@ export default function InvoiceDetail() {
         </div>
 
         {/* Totals */}
-        <div className="px-6 py-5 flex justify-end">
+        <div className="px-5 py-4 flex justify-end">
           <div className="w-full max-w-xs space-y-2">
             <div className="flex justify-between text-sm text-gray-500">
               <span>Subtotal</span>
@@ -282,7 +282,7 @@ export default function InvoiceDetail() {
 
         {/* Notes */}
         {invoice.notes && (
-          <div className="px-6 pb-5">
+          <div className="px-5 pb-4">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Notes</p>
             <p className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">{invoice.notes}</p>
           </div>
@@ -294,7 +294,7 @@ export default function InvoiceDetail() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/30">
+              <div className="p-2 rounded-xl bg-red-100 dark:bg-red-900/30">
                 <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
               </div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Invoice?</h3>

@@ -57,7 +57,6 @@ export default function InvoiceForm() {
               ? inv.items.map(it => {
                   let matchedId = 'custom';
                   if (Array.isArray(pricingData)) {
-                    // Exact match or string inclusion
                     const match = pricingData.find(r => 
                       r.name === it.description || it.description.includes(r.name) || r.name.includes(it.description)
                     );
@@ -149,9 +148,9 @@ export default function InvoiceForm() {
 
   if (loading) {
     return (
-      <div className="space-y-4 animate-pulse max-w-4xl mx-auto mt-6">
-        <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg" />
-        <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+      <div className="space-y-3 animate-pulse max-w-4xl mx-auto mt-4">
+        <div className="h-7 w-40 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+        <div className="h-72 bg-gray-200 dark:bg-gray-700 rounded-xl" />
       </div>
     );
   }
@@ -160,35 +159,36 @@ export default function InvoiceForm() {
   const categories = ["COURSE_FEE", "AIRCRAFT_RENTAL", "INSTRUCTOR_FEE", "EXAM_FEE", "OTHER"];
 
   return (
-    <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-10">
-      <div className="flex items-center gap-4">
+    <div className="flex flex-col gap-5 max-w-4xl mx-auto pb-8">
+      <div className="flex items-center gap-3">
         <button
           onClick={() => navigate('/invoices')}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to List
+          <ArrowLeft className="w-4 h-4" /> Back
         </button>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">
           {isEdit ? 'Edit Invoice' : 'Create New Invoice'}
         </h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-5">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        {/* Billing Details Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
             Billing Details
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">
                 Student <span className="text-red-500">*</span>
               </label>
               <select
                 value={studentId}
                 onChange={e => setStudentId(e.target.value)}
                 disabled={isEdit}
-                className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:text-gray-200 disabled:opacity-60 transition-all"
+                className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:text-gray-200 disabled:opacity-60 transition-all"
               >
                 <option value="">Select a student...</option>
                 {students.map(s => (
@@ -197,109 +197,127 @@ export default function InvoiceForm() {
                   </option>
                 ))}
               </select>
-              {isEdit && <p className="text-xs text-gray-400">Student cannot be changed.</p>}
+              {isEdit && <p className="text-[10px] text-gray-400">Student cannot be changed.</p>}
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Due Date</label>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Due Date</label>
               <input
                 type="date"
                 value={dueDate}
                 onChange={e => setDueDate(e.target.value)}
-                className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:text-gray-200 transition-all"
+                className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:text-gray-200 transition-all"
               />
             </div>
 
-            <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Notes & Terms</label>
+            <div className="flex flex-col gap-1 sm:col-span-2">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Notes & Terms</label>
               <textarea
-                rows={3}
+                rows={2}
                 placeholder="E.g. Pay within 7 days..."
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
-                className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:text-gray-200 resize-none transition-all"
+                className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:text-gray-200 resize-none transition-all"
               />
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
-              <Tag className="w-4 h-4" /> Line Items
+        {/* Line Items Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5" /> Line Items
             </h2>
             <button
               type="button"
               onClick={addItem}
-              className="flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-3 py-1.5 rounded-lg font-semibold transition-colors"
+              className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2.5 py-1.5 rounded-lg font-semibold transition-colors"
             >
-              <Plus className="w-4 h-4" /> Add Item
+              <Plus className="w-3.5 h-3.5" /> Add Item
             </button>
           </div>
 
-          <div className="grid grid-cols-12 gap-3 mb-2 px-1">
-            <span className="col-span-5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Product / Service</span>
-            <span className="col-span-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-center">Qty / Hrs</span>
-            <span className="col-span-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Unit Price</span>
-            <span className="col-span-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right pr-2">Total</span>
+          {/* Column headers */}
+          <div className="grid grid-cols-12 gap-2 mb-2 px-0.5">
+            <span className="col-span-5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Product / Service</span>
+            <span className="col-span-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-center">Qty</span>
+            <span className="col-span-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-right">Unit Price</span>
+            <span className="col-span-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-right pr-1">Total</span>
           </div>
 
           {items.map((item, idx) => (
-            <div key={idx} className="grid grid-cols-12 gap-3 mb-4 items-start group">
-              <div className="col-span-5 flex flex-col gap-2">
-                <select
-                  value={item.catalogId}
-                  onChange={e => handleCatalogChange(idx, e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-blue-50/50 dark:bg-blue-900/10 text-sm text-blue-900 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-medium transition-all"
-                >
-                  <option value="custom">-- Custom Item --</option>
-                  {categories.map(cat => {
-                    const rates = pricingRates.filter(r => r.category === cat);
-                    if (rates.length === 0) return null;
-                    return (
-                      <optgroup key={cat} label={cat.replace('_', ' ')}>
-                        {rates.map(r => (
-                          <option key={r.id} value={String(r.id)}>
-                            {r.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    );
-                  })}
-                </select>
-
-                {item.catalogId === 'custom' && (
-                  <input
-                    type="text"
-                    placeholder="Enter custom description"
-                    value={item.description}
-                    onChange={e => updateItem(idx, 'description', e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all font-medium"
-                  />
-                )}
-                {item.catalogId !== 'custom' && (
-                  <input
-                    type="text"
-                    disabled
-                    value={item.description}
-                    onChange={e => updateItem(idx, 'description', e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-md border border-transparent bg-transparent text-gray-500 dark:text-gray-400 text-xs truncate"
-                  />
+            <div key={idx} className="grid grid-cols-12 gap-2 mb-3 items-center group">
+              {/* Product/Service column */}
+              <div className="col-span-5">
+                {item.catalogId === 'custom' ? (
+                  <>
+                    <select
+                      value={item.catalogId}
+                      onChange={e => handleCatalogChange(idx, e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-blue-50/50 dark:bg-blue-900/10 text-xs text-blue-900 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-medium transition-all mb-1.5"
+                    >
+                      <option value="custom">-- Custom Item --</option>
+                      {categories.map(cat => {
+                        const rates = pricingRates.filter(r => r.category === cat);
+                        if (rates.length === 0) return null;
+                        return (
+                          <optgroup key={cat} label={cat.replace('_', ' ')}>
+                            {rates.map(r => (
+                              <option key={r.id} value={String(r.id)}>
+                                {r.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Enter description..."
+                      value={item.description}
+                      onChange={e => updateItem(idx, 'description', e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all"
+                    />
+                  </>
+                ) : (
+                  <select
+                    value={item.catalogId}
+                    onChange={e => handleCatalogChange(idx, e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-blue-50/50 dark:bg-blue-900/10 text-xs text-blue-900 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-medium transition-all"
+                  >
+                    <option value="custom">-- Custom Item --</option>
+                    {categories.map(cat => {
+                      const rates = pricingRates.filter(r => r.category === cat);
+                      if (rates.length === 0) return null;
+                      return (
+                        <optgroup key={cat} label={cat.replace('_', ' ')}>
+                          {rates.map(r => (
+                            <option key={r.id} value={String(r.id)}>
+                              {r.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
+                  </select>
                 )}
               </div>
               
+              {/* Quantity */}
               <div className="col-span-2">
                 <input
                   type="number"
                   min="1"
                   value={item.quantity}
                   onChange={e => updateItem(idx, 'quantity', e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all"
                 />
               </div>
 
+              {/* Unit Price */}
               <div className="col-span-3 flex items-center">
-                <span className="text-gray-400 px-2">₹</span>
+                <span className="text-gray-400 text-xs px-1">₹</span>
                 <input
                   type="number"
                   min="0"
@@ -307,13 +325,14 @@ export default function InvoiceForm() {
                   placeholder="0.00"
                   value={item.unitPrice}
                   onChange={e => updateItem(idx, 'unitPrice', e.target.value)}
-                  className={`w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all ${
+                  className={`w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all ${
                     item.catalogId !== 'custom' ? 'bg-gray-100 dark:bg-gray-800/50' : 'bg-gray-50 dark:bg-gray-900'
                   }`}
                 />
               </div>
 
-              <div className="col-span-2 flex items-center justify-between pl-1 pt-2">
+              {/* Line Total + Delete */}
+              <div className="col-span-2 flex items-center justify-between pl-0.5">
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 text-right flex-1">
                   ₹{fmt(lineTotal(item))}
                 </span>
@@ -321,41 +340,43 @@ export default function InvoiceForm() {
                   <button
                     type="button"
                     onClick={() => removeItem(idx)}
-                    className="ml-2 p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
+                    className="ml-1.5 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
             </div>
           ))}
 
-          <div className="border-t border-gray-100 dark:border-gray-700 mt-4 pt-4 flex justify-end">
-            <div className="flex items-center gap-8">
-              <span className="text-sm font-bold text-gray-500 uppercase">Grand Total</span>
-              <span className="text-2xl font-black text-gray-900 dark:text-white">₹{fmt(grandTotal)}</span>
+          {/* Grand Total */}
+          <div className="border-t border-gray-100 dark:border-gray-700 mt-3 pt-3 flex justify-end">
+            <div className="flex items-center gap-6">
+              <span className="text-xs font-bold text-gray-500 uppercase">Grand Total</span>
+              <span className="text-lg font-black text-gray-900 dark:text-white">₹{fmt(grandTotal)}</span>
             </div>
           </div>
         </div>
 
         {error && (
-          <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400 flex items-center gap-2">
+          <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-400 flex items-center gap-2">
             <span className="font-bold">Error:</span> {error}
           </div>
         )}
 
+        {/* Action Buttons */}
         <div className="flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={() => navigate('/invoices')}
-            className="px-6 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="px-5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-8 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-sm shadow-blue-500/20 disabled:opacity-70 transition-all active:scale-95"
+            className="flex items-center gap-2 px-6 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-sm shadow-blue-500/20 disabled:opacity-70 transition-all active:scale-95"
           >
             {saving && <Loader className="w-4 h-4 animate-spin" />}
             {saving ? 'Saving...' : isEdit ? 'Submit Updates' : 'Create Invoice'}
