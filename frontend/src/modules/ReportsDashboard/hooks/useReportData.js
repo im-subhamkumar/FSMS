@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 export function useReportData(initialDateRange = { from: '', to: '' }) {
   const [dateRange, setDateRange] = useState(initialDateRange);
@@ -9,7 +9,9 @@ export function useReportData(initialDateRange = { from: '', to: '' }) {
     students: null,
     flights: null,
     instructors: null,
-    courses: null
+    courses: null,
+    fleet: null,
+    compliance: null
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,10 +19,6 @@ export function useReportData(initialDateRange = { from: '', to: '' }) {
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
-    const headers = {
-      'Content-Type': 'application/json'
-    };
 
     const q = new URLSearchParams();
     if (dateRange.from) q.append('from', dateRange.from);
@@ -28,27 +26,25 @@ export function useReportData(initialDateRange = { from: '', to: '' }) {
     const qs = q.toString() ? `?${q.toString()}` : '';
 
     try {
-      const [finRes, stuRes, fliRes, insRes, couRes] = await Promise.all([
-        fetch(`${API_BASE}/reports/financial${qs}`, { headers }),
-        fetch(`${API_BASE}/reports/students${qs}`, { headers }),
-        fetch(`${API_BASE}/reports/flights${qs}`, { headers }),
-        fetch(`${API_BASE}/reports/instructors${qs}`, { headers }),
-        fetch(`${API_BASE}/reports/courses${qs}`, { headers })
-      ]);
+      const endpoints = [
+        'financial', 'students', 'flights',
+        'instructors', 'courses', 'fleet', 'compliance'
+      ];
 
-      if (!finRes.ok || !stuRes.ok || !fliRes.ok || !insRes.ok || !couRes.ok) {
-        throw new Error('Failed to fetch report data. API returned an error.');
+      const responses = await Promise.all(
+        endpoints.map(ep => fetch(`${API_BASE}/reports/${ep}${qs}`))
+      );
+
+      // Check for any failed responses
+      const failedIdx = responses.findIndex(r => !r.ok);
+      if (failedIdx !== -1) {
+        throw new Error(`Failed to fetch ${endpoints[failedIdx]} report (${responses[failedIdx].status})`);
       }
 
-      const [financial, students, flights, instructors, courses] = await Promise.all([
-        finRes.json(),
-        stuRes.json(),
-        fliRes.json(),
-        insRes.json(),
-        couRes.json()
-      ]);
+      const [financial, students, flights, instructors, courses, fleet, compliance] =
+        await Promise.all(responses.map(r => r.json()));
 
-      setData({ financial, students, flights, instructors, courses });
+      setData({ financial, students, flights, instructors, courses, fleet, compliance });
     } catch (err) {
       setError(err.message);
     } finally {

@@ -3,25 +3,16 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, Sector } fro
 import { PieChart as PieChartIcon } from 'lucide-react';
 
 const COLORS = {
-  PENDING: '#f59e0b',  // Amber
-  PAID: '#0ea5e9',     // Blue
-  OVERDUE: '#ef4444'   // Red
+  PENDING: '#f59e0b',
+  PAID: '#10b981',
+  OVERDUE: '#ef4444'
 };
 
-// Custom shape to create a zoom/pop-out effect
 const renderActiveShape = (props) => {
   const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
   return (
     <g>
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius + 8} // Zoomed effect
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-      />
+      <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 6} startAngle={startAngle} endAngle={endAngle} fill={fill} />
     </g>
   );
 };
@@ -36,38 +27,32 @@ export default function InvoiceStatusPieChart({ data = {} }) {
 
   if (!pieData || pieData.length === 0) {
     return (
-      <div className="h-full w-full bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center">
-        <div className="p-3 bg-gray-50 rounded-full mb-4 shadow-sm border border-gray-100">
-           <PieChartIcon className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
+      <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center min-h-[280px]">
+        <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-full mb-3">
+          <PieChartIcon className="w-6 h-6 text-gray-400" />
         </div>
-        <h3 className="text-gray-700 font-semibold text-base">Invoice Status</h3>
-        <p className="text-gray-500 text-xs mt-1">No invoices generated in this period.</p>
+        <h3 className="text-gray-700 dark:text-gray-300 font-semibold text-sm">Invoice Status</h3>
+        <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">No invoices in this period.</p>
       </div>
     );
   }
 
   const totalInvoices = pieData.reduce((sum, item) => sum + item.value, 0);
 
-  const onPieEnter = (_, index) => {
-    setActiveIndex(index);
-  };
-  const onPieLeave = () => {
-    setActiveIndex(-1);
-  };
-
   return (
-    <div className="h-full w-full bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col relative">
+    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col min-h-[280px] relative">
       <div className="mb-2">
-        <h3 className="text-gray-800 font-semibold text-base">Invoice Status</h3>
-        <p className="text-gray-500 text-xs">Distribution by payment state</p>
-      </div>
-      
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-10">
-        <span className="text-3xl font-bold text-gray-800">{totalInvoices}</span>
-        <span className="text-xs text-gray-400 font-medium tracking-wider uppercase mt-1">Total</span>
+        <h3 className="text-gray-800 dark:text-gray-100 font-semibold text-sm">Invoice Status</h3>
+        <p className="text-gray-400 dark:text-gray-500 text-xs">Distribution by payment state</p>
       </div>
 
-      <div className="flex-1 min-h-[220px] relative z-10 w-full">
+      {/* Center label */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ marginTop: '60px' }}>
+        <span className="text-2xl font-black text-gray-800 dark:text-white">{totalInvoices}</span>
+        <span className="text-[10px] text-gray-400 font-semibold tracking-wider uppercase">Total</span>
+      </div>
+
+      <div className="flex-1 min-h-[200px] relative z-10">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -76,31 +61,30 @@ export default function InvoiceStatusPieChart({ data = {} }) {
               data={pieData}
               cx="50%"
               cy="45%"
-              innerRadius={70}
-              outerRadius={95}
-              paddingAngle={2}
+              innerRadius={55}
+              outerRadius={78}
+              paddingAngle={3}
               dataKey="value"
-              animationBegin={0}
-              animationDuration={1000}
+              animationDuration={800}
               stroke="none"
-              onMouseEnter={onPieEnter}
-              onMouseLeave={onPieLeave}
+              onMouseEnter={(_, index) => setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(-1)}
             >
               {pieData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[entry.name] || '#94a3b8'} />
               ))}
             </Pie>
-            <Tooltip 
-              formatter={(value) => [value, 'Count']}
-              contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+            <Tooltip
+              formatter={(value, name) => [value, name]}
+              contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '12px' }}
               itemStyle={{ fontWeight: '600', color: '#1e293b' }}
             />
-            <Legend 
-              verticalAlign="bottom" 
-              height={36}
+            <Legend
+              verticalAlign="bottom"
+              height={30}
               iconType="circle"
-              wrapperStyle={{ paddingTop: '20px' }}
-              formatter={(value) => <span className="text-gray-600 font-medium ml-1 text-sm">{value}</span>}
+              iconSize={8}
+              formatter={(value) => <span className="text-gray-600 dark:text-gray-300 font-medium ml-1 text-xs">{value}</span>}
             />
           </PieChart>
         </ResponsiveContainer>

@@ -7,37 +7,62 @@ export default function ExportButtons({ dateRange, data }) {
     if (!data || !data.financial) return;
 
     const csvRows = [];
-    csvRows.push(['Metric', 'Value']);
+    csvRows.push(['FSMS Report Dashboard — CSV Export']);
     csvRows.push(['Report Start', dateRange.from || 'All Time']);
     csvRows.push(['Report End', dateRange.to || 'Present']);
-    csvRows.push(['']);
-    
-    // Financials
-    csvRows.push(['Financial summary', '']);
+    csvRows.push(['Generated', new Date().toLocaleString()]);
+    csvRows.push([]);
+
+    // Financial
+    csvRows.push(['--- Financial Summary ---']);
     csvRows.push(['Total Revenue (Paid)', data.financial.totalRevenue || 0]);
+    csvRows.push(['Total Billed', data.financial.totalBilled || 0]);
     csvRows.push(['Pending Amount', data.financial.pendingAmount || 0]);
     csvRows.push(['Overdue Amount', data.financial.overdueAmount || 0]);
     csvRows.push(['Overdue Invoices', data.financial.overdueCount || 0]);
-    csvRows.push(['']);
+    csvRows.push(['Collection Rate', `${data.financial.collectionRate || 0}%`]);
+    csvRows.push([]);
 
     // Operations
-    csvRows.push(['Operations summary', '']);
-    csvRows.push(['Total Active Students', data.students?.activeStudents || 0]);
+    csvRows.push(['--- Operations Summary ---']);
+    csvRows.push(['Active Students', data.students?.activeStudents || 0]);
     csvRows.push(['Total Flight Hours', data.flights?.totalFlyingHours || 0]);
     csvRows.push(['Total Flight Slots', data.flights?.totalSlots || 0]);
     csvRows.push(['Completed Slots', data.flights?.completedSlots || 0]);
     csvRows.push(['Cancelled Slots', data.flights?.cancelledSlots || 0]);
-    csvRows.push(['']);
+    csvRows.push(['Slot Utilization', `${data.flights?.utilizationRate || 0}%`]);
+    csvRows.push([]);
 
-    // Staffing & Courses
-    csvRows.push(['Staff & Courses', '']);
-    csvRows.push(['Total Active Instructors', data.instructors?.activeInstructors || 0]);
+    // Staff & Courses
+    csvRows.push(['--- Academy & Staff ---']);
+    csvRows.push(['Active Instructors', data.instructors?.activeInstructors || 0]);
     csvRows.push(['Total Courses', data.courses?.totalCourses || 0]);
+    csvRows.push([]);
+
+    // Fleet
+    if (data.fleet) {
+      csvRows.push(['--- Fleet Status ---']);
+      csvRows.push(['Total Aircraft', data.fleet.totalAircraft || 0]);
+      csvRows.push(['Open Squawks', data.fleet.openSquawks || 0]);
+      (data.fleet.statusDistribution || []).forEach(s => {
+        csvRows.push([s.name, s.value]);
+      });
+      csvRows.push([]);
+    }
+
+    // Compliance
+    if (data.compliance) {
+      csvRows.push(['--- Compliance Alerts ---']);
+      csvRows.push(['Expired Items', data.compliance.expiredCount || 0]);
+      csvRows.push(['Expiring Soon', data.compliance.expiringSoonCount || 0]);
+      (data.compliance.alerts || []).forEach(a => {
+        csvRows.push([a.type, a.entity, a.detail, a.status, new Date(a.expiryDate).toLocaleDateString()]);
+      });
+    }
 
     const csvContent = csvRows.map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    
     const a = document.createElement('a');
     a.href = url;
     a.download = `FSMS_Report_${new Date().toISOString().split('T')[0]}.csv`;
@@ -52,75 +77,93 @@ export default function ExportButtons({ dateRange, data }) {
     let yPos = 20;
 
     // Header
-    doc.setFontSize(22);
+    doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
     doc.text('FSMS Report Dashboard', 15, yPos);
-    yPos += 12;
+    yPos += 10;
 
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 15, yPos);
-    doc.text(`Filter Date Range: ${dateRange.from || 'Start'} to ${dateRange.to || 'End'}`, 120, yPos);
-    yPos += 20;
+    doc.text(`Generated: ${new Date().toLocaleDateString()}  |  Period: ${dateRange.from || 'Start'} to ${dateRange.to || 'End'}`, 15, yPos);
+    yPos += 15;
 
-    // Helper to draw a section
+    // Section helper
     const drawSection = (title, metrics) => {
-      doc.setFontSize(16);
+      if (yPos > 260) { doc.addPage(); yPos = 20; }
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(30, 41, 59); // slate-800
+      doc.setTextColor(30, 41, 59);
       doc.text(title, 15, yPos);
-      yPos += 8;
+      yPos += 7;
 
-      doc.setFontSize(12);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(71, 85, 105); // slate-600
+      doc.setTextColor(71, 85, 105);
       metrics.forEach(m => {
         doc.text(m.label, 20, yPos);
         doc.setFont('helvetica', 'bold');
         doc.text(String(m.value), 120, yPos);
         doc.setFont('helvetica', 'normal');
-        yPos += 8;
+        yPos += 7;
       });
-      yPos += 10;
+      yPos += 8;
     };
 
     drawSection('Financial Metrics', [
-      { label: 'Total Revenue (Paid):', value: `INR ${data.financial.totalRevenue?.toLocaleString() || 0}` },
-      { label: 'Outstanding Pending:', value: `INR ${data.financial.pendingAmount?.toLocaleString() || 0}` },
-      { label: 'Overdue Amount:', value: `INR ${data.financial.overdueAmount?.toLocaleString() || 0}` },
-      { label: 'Overdue Invoices Count:', value: data.financial.overdueCount || 0 },
+      { label: 'Total Revenue (Paid):', value: `INR ${(data.financial.totalRevenue || 0).toLocaleString()}` },
+      { label: 'Total Billed:', value: `INR ${(data.financial.totalBilled || 0).toLocaleString()}` },
+      { label: 'Outstanding Pending:', value: `INR ${(data.financial.pendingAmount || 0).toLocaleString()}` },
+      { label: 'Overdue Amount:', value: `INR ${(data.financial.overdueAmount || 0).toLocaleString()}` },
+      { label: 'Collection Rate:', value: `${data.financial.collectionRate || 0}%` },
     ]);
 
     drawSection('Operational Metrics', [
-      { label: 'Total Active Students:', value: data.students?.activeStudents || 0 },
+      { label: 'Active Students:', value: data.students?.activeStudents || 0 },
       { label: 'Total Flight Hours:', value: `${data.flights?.totalFlyingHours || 0} hrs` },
-      { label: 'Flight Slots (Completed/Total):', value: `${data.flights?.completedSlots || 0} / ${data.flights?.totalSlots || 0}` },
+      { label: 'Completed / Total Slots:', value: `${data.flights?.completedSlots || 0} / ${data.flights?.totalSlots || 0}` },
+      { label: 'Slot Utilization:', value: `${data.flights?.utilizationRate || 0}%` },
     ]);
 
     drawSection('Academy & Staff', [
-      { label: 'Total Active Instructors:', value: data.instructors?.activeInstructors || 0 },
-      { label: 'Total Courses Offered:', value: data.courses?.totalCourses || 0 },
+      { label: 'Active Instructors:', value: data.instructors?.activeInstructors || 0 },
+      { label: 'Total Courses:', value: data.courses?.totalCourses || 0 },
     ]);
+
+    if (data.fleet) {
+      drawSection('Fleet Status', [
+        { label: 'Total Aircraft:', value: data.fleet.totalAircraft || 0 },
+        { label: 'Open Squawks:', value: data.fleet.openSquawks || 0 },
+        ...(data.fleet.statusDistribution || []).map(s => ({ label: `${s.name}:`, value: s.value }))
+      ]);
+    }
+
+    if (data.compliance && data.compliance.totalAlerts > 0) {
+      drawSection('Compliance Alerts', [
+        { label: 'Expired Items:', value: data.compliance.expiredCount || 0 },
+        { label: 'Expiring Soon:', value: data.compliance.expiringSoonCount || 0 },
+      ]);
+    }
 
     doc.save(`FSMS_Report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
-    <div className="flex items-center space-x-3 mt-4 md:mt-0 ml-auto">
-      <button 
+    <div className="flex items-center gap-2">
+      <button
         onClick={exportCSV}
         disabled={!data || !data.financial}
-        className="px-4 py-2 text-sm font-semibold border border-gray-200 bg-white rounded-lg shadow-sm hover:bg-gray-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center"
+        className="px-3 py-1.5 text-xs font-semibold border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1.5"
       >
-        <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" /> Download CSV
+        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" /> CSV
       </button>
-      <button 
+      <button
         onClick={exportPDF}
         disabled={!data || !data.financial}
-        className="px-4 py-2 text-sm font-semibold border border-gray-200 bg-white rounded-lg shadow-sm hover:bg-gray-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center"
+        className="px-3 py-1.5 text-xs font-semibold border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1.5"
       >
-        <FileText className="w-4 h-4 mr-2 text-rose-600" /> Download PDF
+        <FileText className="w-3.5 h-3.5 text-rose-500" /> PDF
       </button>
     </div>
   );
