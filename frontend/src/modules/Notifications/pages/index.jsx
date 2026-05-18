@@ -1,14 +1,23 @@
-import React from 'react';
+import NotificationBell from "../components/NotificationBell";
+import NotificationList from "../components/NotificationList";
+import EventSimulator from "../components/EventSimulator";
 
-export default function NotificationsRoot() {
-    return (
-        <div className="flex flex-col h-full">
-            <h1 className="text-2xl font-bold mb-4">N ot if ic at io ns</h1>
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 flex items-center justify-center">
-                <p className="text-gray-500 dark:text-gray-400 text-lg">
-                    This is the N ot if ic at io ns module placeholder.
-                </p>
-            </div>
-        </div>
-    );
-}
+const NotificationsPage = () => {
+  return (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">
+          Notifications
+        </h1>
+
+        <NotificationBell />
+      </div>
+
+      <EventSimulator />
+
+      <NotificationList />
+    </div>
+  );
+};
+
+export default NotificationsPage;
