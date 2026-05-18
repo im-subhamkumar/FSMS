@@ -4,7 +4,8 @@ export const getAircrafts = async () => {
   try {
     const response = await fetch(`${API_URL}/aircraft`);
     if (!response.ok) throw new Error("Failed to fetch aircrafts");
-    return await response.json();
+    const json = await response.json();
+    return json.data || json || [];
   } catch (error) {
     console.error("Error fetching aircrafts:", error);
     return [];
