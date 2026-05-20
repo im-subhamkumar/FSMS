@@ -44,7 +44,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const {
-      id, tailNumber, manufacturer, model, serialNumber, yearOfManufacture,
+      id, tailNumber, name, manufacturer, model, serialNumber, yearOfManufacture,
       cruisingRange, mtow, emptyWeight, fuelCapacity, capacity,
       lastMaintenance, maintenanceSchedule, totalFlightHours, maintenanceStatus, insuranceExpiryDate,
       status, availability, type, notes
@@ -68,7 +68,7 @@ router.post('/', async (req, res) => {
       data: {
         id,
         tailNumber,
-        name: tailNumber, // Kept for backwards compatibility
+        name: name || tailNumber, // Use provided name, fallback to tailNumber
         manufacturer: manufacturer || null,
         model,
         serialNumber: serialNumber || null,
@@ -101,7 +101,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const {
-      tailNumber, manufacturer, model, serialNumber, yearOfManufacture,
+      tailNumber, name, manufacturer, model, serialNumber, yearOfManufacture,
       cruisingRange, mtow, emptyWeight, fuelCapacity, capacity,
       lastMaintenance, maintenanceSchedule, totalFlightHours, maintenanceStatus, insuranceExpiryDate,
       status, availability, type, notes
@@ -112,7 +112,7 @@ router.put('/:id', async (req, res) => {
       where: { id: req.params.id },
       data: {
         tailNumber,
-        name: tailNumber,
+        name: name || tailNumber,
         manufacturer,
         model,
         serialNumber,

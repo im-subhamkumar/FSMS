@@ -174,32 +174,38 @@ router.post("/", async (req, res) => {
         }
       });
 
-      await tx.studentLicense.create({
-        data: {
-          studentId: student.id,
-          licenseNumber,
-          licenseType,
-          issueDate: new Date(licenseIssueDate),
-          expiryDate: new Date(licenseExpiryDate)
-        }
-      });
+      if (licenseNumber && licenseType && licenseIssueDate && licenseExpiryDate) {
+        await tx.studentLicense.create({
+          data: {
+            studentId: student.id,
+            licenseNumber,
+            licenseType,
+            issueDate: new Date(licenseIssueDate),
+            expiryDate: new Date(licenseExpiryDate)
+          }
+        });
+      }
 
-      await tx.studentMedical.create({
-        data: {
-          studentId: student.id,
-          medicalCertificateNumber,
-          issueDate: new Date(medicalIssueDate),
-          expiryDate: new Date(medicalExpiryDate)
-        }
-      });
+      if (medicalCertificateNumber && medicalIssueDate && medicalExpiryDate) {
+        await tx.studentMedical.create({
+          data: {
+            studentId: student.id,
+            medicalCertificateNumber,
+            issueDate: new Date(medicalIssueDate),
+            expiryDate: new Date(medicalExpiryDate)
+          }
+        });
+      }
 
-      await tx.studentAccount.create({
-        data: {
-          studentId: student.id,
-          schoolEmail: schoolEmail || `${studentId.toLowerCase()}@fsms.com`,
-          passwordHash: passwordHash || '123456'
-        }
-      });
+      if (schoolEmail) {
+        await tx.studentAccount.create({
+          data: {
+            studentId: student.id,
+            schoolEmail,
+            passwordHash: req.body.password || req.body.passwordHash || '123456'
+          }
+        });
+      }
 
       if (documents && documents.length > 0) {
         await tx.studentDocument.createMany({

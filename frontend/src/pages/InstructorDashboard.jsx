@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { Users, Calendar, Clock, CheckCircle, ClipboardCheck } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 export const InstructorDashboard = () => {
