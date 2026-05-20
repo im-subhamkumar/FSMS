@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Calendar, AlertTriangle, TrendingUp, Activity, CheckCircle } from 'lucide-react';
+import { StudentDashboard } from './StudentDashboard';
+import { InstructorDashboard } from './InstructorDashboard';
+import { useAppStore } from '../store/useAppStore';
 
 const stats = [
     { id: 1, name: 'Total Trainees', value: '1,204', icon: Users, change: '+12%', changeType: 'positive', color: 'blue' },
@@ -24,7 +27,7 @@ const SkeletonCard = () => (
     </div>
 );
 
-export const Dashboard = () => {
+const AdminDashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -164,4 +167,12 @@ export const Dashboard = () => {
             
         </div>
     );
+};
+
+export const Dashboard = () => {
+    const { user } = useAppStore();
+    
+    if (user?.role === 'Student') return <StudentDashboard />;
+    if (user?.role === 'Instructor') return <InstructorDashboard />;
+    return <AdminDashboard />;
 };

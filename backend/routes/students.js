@@ -1,8 +1,37 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { v4 as uuidv4 } from "uuid";
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+// ──────────────────────────────────────────
+// File Upload Setup (multer)
+// ──────────────────────────────────────────
+const UPLOAD_DIR = path.resolve('uploads/students');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${uuidv4()}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.doc', '.docx'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) cb(null, true);
+    else cb(new Error(`File type ${ext} not allowed`));
+  },
+});
 
 /*
 ---------------------------------------------------
@@ -167,7 +196,7 @@ router.post("/", async (req, res) => {
       await tx.studentAccount.create({
         data: {
           studentId: student.id,
-          schoolEmail: schoolEmail || `${studentId.toLowerCase()}@flightschool.com`,
+          schoolEmail: schoolEmail || `${studentId.toLowerCase()}@fsms.com`,
           passwordHash: passwordHash || '123456'
         }
       });
@@ -338,4 +367,85 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+/*
+---------------------------------------------------
+GET student documents
+---------------------------------------------------
+*/
+router.get("/:id/documents", async (req, res) => {
+  try {
+    const docs = await prisma.studentDocument.findMany({
+      where: { studentId: parseInt(req.params.id) },
+      orderBy: { uploadedAt: 'desc' },
+    });
+    res.json(docs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/*
+---------------------------------------------------
+POST /api/students/:id/documents — upload file
+---------------------------------------------------
+*/
+router.post("/:id/documents", upload.single("file"), async (req, res) => {
+  try {
+    console.log(`[UPLOAD DEBUG] Received POST /${req.params.id}/documents`);
+    console.log(`[UPLOAD DEBUG] Body:`, req.body);
+    console.log(`[UPLOAD DEBUG] File:`, req.file);
+
+    if (!req.file) {
+      console.log(`[UPLOAD DEBUG] Missing file.`);
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const { documentType } = req.body;
+    const studentId = parseInt(req.params.id);
+
+    console.log(`[UPLOAD DEBUG] Saving to DB...`);
+    const doc = await prisma.studentDocument.create({
+      data: {
+        studentId,
+        documentType: documentType || 'General',
+        fileUrl: `/uploads/students/${req.file.filename}`,
+      },
+    });
+
+    console.log(`[UPLOAD DEBUG] Document created!`, doc.id);
+    res.status(201).json(doc);
+  } catch (error) {
+    console.error(`[UPLOAD DEBUG] ERROR:`, error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/*
+---------------------------------------------------
+DELETE /api/students/:id/documents/:docId
+---------------------------------------------------
+*/
+router.delete("/:id/documents/:docId", async (req, res) => {
+  try {
+    const doc = await prisma.studentDocument.findFirst({
+      where: {
+        id: parseInt(req.params.docId),
+        studentId: parseInt(req.params.id),
+      },
+    });
+
+    if (!doc) return res.status(404).json({ error: 'Document not found' });
+
+    // Delete physical file
+    const filePath = path.resolve(`.${doc.fileUrl}`);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    await prisma.studentDocument.delete({ where: { id: doc.id } });
+    res.json({ message: 'Document deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

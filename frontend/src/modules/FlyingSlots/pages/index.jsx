@@ -6,6 +6,7 @@ import { enUS } from 'date-fns/locale';
 import { Search } from 'lucide-react';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import { useAppStore } from '../../../store/useAppStore';
 
 const locales = {
   'en-US': enUS,
@@ -24,6 +25,10 @@ const DnDCalendar = withDragAndDrop(Calendar);
 const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 export default function FlyingSlotsRoot() {
+    const { user } = useAppStore();
+    const isStudent = user?.role === 'Student';
+    const isInstructor = user?.role === 'Instructor';
+    
     const [slots, setSlots] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -77,7 +82,14 @@ export default function FlyingSlotsRoot() {
 
     const fetchSlots = async () => {
         try {
-            const response = await fetch(`${API_BASE}/schedules`);
+            let url = `${API_BASE}/schedules`;
+            if (isStudent && user?.id) {
+                url += `?traineeId=${user.id}`;
+            } else if (isInstructor && (user?.instructorDbId || user?.id)) {
+                // instructorDbId is the Instructor table ID; schedules reference this, NOT the User table ID
+                url += `?instructorId=${user.instructorDbId || user.id}`;
+            }
+            const response = await fetch(url);
             if (response.ok) {
                 const data = await response.json();
                 setSchedules(data);
@@ -276,7 +288,7 @@ export default function FlyingSlotsRoot() {
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {filteredSlots.length > 0 ? (
                             filteredSlots.map((slot) => (
-                                <tr key={slot.id} onClick={() => handleOpenModal(slot)} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer" title="Click to edit">
+                                <tr key={slot.id} onClick={() => { if (!isStudent) handleOpenModal(slot); }} className={`transition-colors ${isStudent ? '' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer'}`} title={isStudent ? '' : isInstructor ? 'Click to reschedule or cancel' : 'Click to edit'}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900 dark:text-white">{slot.date}</div>
                                         <div className="text-sm text-gray-500 dark:text-gray-400">{slot.startTime} - {slot.endTime}</div>
@@ -362,12 +374,12 @@ export default function FlyingSlotsRoot() {
                     step={30}
                     timeslots={2}
                     date={new Date(selectedDate)}
-                    onEventDrop={handleEventUpdate}
-                    onEventResize={handleEventUpdate}
-                    resizable
+                    onEventDrop={(isStudent || isInstructor) ? undefined : handleEventUpdate}
+                    onEventResize={(isStudent || isInstructor) ? undefined : handleEventUpdate}
+                    resizable={!isStudent && !isInstructor}
                     onNavigate={(newDate) => setSelectedDate(newDate.toISOString().split('T')[0])}
-                    selectable
-                    onSelectSlot={(slotInfo) => {
+                    selectable={!isStudent && !isInstructor}
+                    onSelectSlot={(isStudent || isInstructor) ? undefined : (slotInfo) => {
                         const dateStr = slotInfo.start.toISOString().split('T')[0];
                         const timeStr = slotInfo.start.toTimeString().substring(0, 5);
                         const endTimeStr = slotInfo.end.toTimeString().substring(0, 5);
@@ -381,7 +393,7 @@ export default function FlyingSlotsRoot() {
                         setEditId(null);
                         setIsModalOpen(true);
                     }}
-                    onSelectEvent={(event) => handleOpenModal(event)}
+                    onSelectEvent={(event) => { if (!isStudent) handleOpenModal(event); else return; }}
                     components={{
                         event: CustomEvent
                     }}
@@ -432,7 +444,7 @@ export default function FlyingSlotsRoot() {
                                     </div>
                                     <div className={`absolute -left-[1.65rem] top-4 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-800 ${isActiveOccupied ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
                                     <div className="min-h-[2.5rem] flex flex-col gap-3">
-                                        {!isActiveOccupied && (
+                                        {!isActiveOccupied && !isStudent && !isInstructor && (
                                             <div className="text-sm text-green-600 dark:text-green-400/80 font-medium italic opacity-70 py-1 hover:opacity-100 transition-opacity flex items-center gap-2 cursor-pointer" onClick={() => {
                                                 setFormData({ ...formData, date: selectedDate, startTime: timeStr, endTime: `${(hour+2).toString().padStart(2, '0')}:00` });
                                                 setEditId(null);
@@ -442,7 +454,7 @@ export default function FlyingSlotsRoot() {
                                             </div>
                                         )}
                                         {startingHere.map(slot => (
-                                            <div key={slot.id} onClick={() => handleOpenModal(slot)} className={`p-4 rounded-xl cursor-pointer border shadow-sm ${slot.status === 'Completed' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : slot.status === 'Cancelled' ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'} transition-all hover:scale-[1.01] hover:shadow-md relative overflow-hidden`}>
+                                            <div key={slot.id} onClick={() => { if (!isStudent) handleOpenModal(slot); }} className={`p-4 rounded-xl border shadow-sm ${isStudent ? '' : 'cursor-pointer hover:scale-[1.01] hover:shadow-md'} ${slot.status === 'Completed' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : slot.status === 'Cancelled' ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'} transition-all relative overflow-hidden`}>
                                                 <div className="flex justify-between items-start">
                                                     <div>
                                                         <div className="font-bold text-gray-900 dark:text-white">{slot.startTime} - {slot.endTime}</div>
@@ -495,10 +507,14 @@ export default function FlyingSlotsRoot() {
                             className="pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
                         />
                     </div>
-                    <button onClick={() => handleOpenModal()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors">+ Add Slot</button>
-                    <button onClick={handleSyncWeather} disabled={syncing} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg disabled:opacity-50 transition-colors">
-                        {syncing ? 'Syncing...' : 'Sync Weather'}
-                    </button>
+                    {!isStudent && !isInstructor && (
+                        <>
+                            <button onClick={() => handleOpenModal()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors">+ Add Slot</button>
+                            <button onClick={handleSyncWeather} disabled={syncing} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg disabled:opacity-50 transition-colors">
+                                {syncing ? 'Syncing...' : 'Sync Weather'}
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -509,8 +525,18 @@ export default function FlyingSlotsRoot() {
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
                     <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl my-8 border border-gray-200 dark:border-gray-700">
-                        <h2 className="text-2xl font-bold mb-6 border-b pb-4 dark:border-gray-700">{editId ? 'Edit Flying Slot' : 'Schedule Flying Slot'}</h2>
+                        <h2 className="text-2xl font-bold mb-6 border-b pb-4 dark:border-gray-700">
+                            {isInstructor ? 'Reschedule / Cancel Slot' : (editId ? 'Edit Flying Slot' : 'Schedule Flying Slot')}
+                        </h2>
                         <div className="space-y-5">
+                            {/* Instructor sees a read-only summary of the slot details */}
+                            {isInstructor && (
+                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-1">
+                                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">Student: <span className="font-normal">{formData.student}</span></p>
+                                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">Aircraft: <span className="font-normal">{formData.aircraft}</span></p>
+                                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">Flight Type: <span className="font-normal">{formData.flightType}</span></p>
+                                </div>
+                            )}
                             <div className="grid grid-cols-2 gap-5">
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Date *</label>
@@ -527,84 +553,66 @@ export default function FlyingSlotsRoot() {
                                     </div>
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Instructor *</label>
-                                <select 
-                                    name="instructor" 
-                                    value={`${formData.instructor}|${formData.instructorId}`} 
-                                    onChange={(e) => {
-                                        const [name, id] = e.target.value.split('|');
-                                        setFormData(prev => ({ ...prev, instructor: name, instructorId: id }));
-                                    }} 
-                                    className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
-                                    required
-                                >
-                                    <option value="">Select Instructor</option>
-                                    {instructors.map(i => {
-                                        const fullName = i.user ? `${i.user.firstName} ${i.user.lastName}` : (i.name || 'Unknown');
-                                        return (
-                                            <option key={i.id} value={`${fullName}|${i.id}`}>
-                                                {fullName}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Student *</label>
-                                <select 
-                                    name="student" 
-                                    value={`${formData.student}|${formData.traineeId}`} 
-                                    onChange={(e) => {
-                                        const [name, id] = e.target.value.split('|');
-                                        setFormData(prev => ({ ...prev, student: name, traineeId: id }));
-                                    }} 
-                                    className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
-                                    required
-                                >
-                                    <option value="">Select Student</option>
-                                    {students.map(s => (
-                                        <option key={s.id} value={`${s.firstName} ${s.lastName}|${s.id}`}>
-                                            {s.firstName} {s.lastName} ({s.studentId})
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            {/* Only Admin sees instructor/student/aircraft dropdowns */}
+                            {!isInstructor && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Instructor *</label>
+                                        <select name="instructor" value={`${formData.instructor}|${formData.instructorId}`} onChange={(e) => { const [name, id] = e.target.value.split('|'); setFormData(prev => ({ ...prev, instructor: name, instructorId: id })); }} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" required>
+                                            <option value="">Select Instructor</option>
+                                            {instructors.map(i => { const fullName = i.user ? `${i.user.firstName} ${i.user.lastName}` : (i.name || 'Unknown'); return (<option key={i.id} value={`${fullName}|${i.id}`}>{fullName}</option>); })}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Student *</label>
+                                        <select name="student" value={`${formData.student}|${formData.traineeId}`} onChange={(e) => { const [name, id] = e.target.value.split('|'); setFormData(prev => ({ ...prev, student: name, traineeId: id })); }} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" required>
+                                            <option value="">Select Student</option>
+                                            {students.map(s => (<option key={s.id} value={`${s.firstName} ${s.lastName}|${s.id}`}>{s.firstName} {s.lastName} ({s.studentId})</option>))}
+                                        </select>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Aircraft *</label>
+                                            <select name="aircraft" value={formData.aircraft} onChange={(e) => setFormData(prev => ({ ...prev, aircraft: e.target.value }))} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" required>
+                                                <option value="">Select Aircraft</option>
+                                                {aircraftList.map(a => (<option key={a.id} value={a.id}>{a.tailNumber || a.id} - {a.model}</option>))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Flight Type</label>
+                                            <select name="flightType" value={formData.flightType} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border">
+                                                <option value="Dual">Dual</option>
+                                                <option value="Solo">Solo</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                                            <select name="status" value={formData.status} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border">
+                                                <option value="Scheduled">Scheduled</option>
+                                                <option value="Completed">Completed</option>
+                                                <option value="Cancelled">Cancelled</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                            {/* Instructor-only: simple status action buttons */}
+                            {isInstructor && (
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Aircraft *</label>
-                                    <select 
-                                        name="aircraft" 
-                                        value={formData.aircraft} 
-                                        onChange={(e) => setFormData(prev => ({ ...prev, aircraft: e.target.value }))} 
-                                        className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border" 
-                                        required
-                                    >
-                                        <option value="">Select Aircraft</option>
-                                        {aircraftList.map(a => (
-                                            <option key={a.id} value={a.id}>{a.tailNumber || a.id} - {a.model}</option>
-                                        ))}
-                                    </select>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Action</label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button type="button" onClick={() => setFormData(prev => ({...prev, status: 'Cancelled'}))} className={`py-2.5 px-4 rounded-lg border-2 font-bold text-sm transition-all ${ formData.status === 'Cancelled' ? 'border-red-500 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-red-300'}`}>
+                                            ✕ Cancel Slot
+                                        </button>
+                                        <button type="button" onClick={() => setFormData(prev => ({...prev, status: 'Scheduled'}))} className={`py-2.5 px-4 rounded-lg border-2 font-bold text-sm transition-all ${ formData.status === 'Scheduled' ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-blue-300'}`}>
+                                            ↻ Reschedule
+                                        </button>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Flight Type</label>
-                                    <select name="flightType" value={formData.flightType} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border">
-                                        <option value="Dual">Dual</option>
-                                        <option value="Solo">Solo</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                                    <select name="status" value={formData.status} onChange={handleInputChange} className="w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white py-2.5 px-3 border">
-                                        <option value="Scheduled">Scheduled</option>
-                                        <option value="Completed">Completed</option>
-                                        <option value="Cancelled">Cancelled</option>
-                                    </select>
-                                </div>
-                            </div>
+                            )}
                             <div className="flex justify-end gap-3 mt-8 border-t pt-5 dark:border-gray-700">
-                                <button onClick={handleCloseModal} className="px-5 py-2.5 text-gray-500 font-bold hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Cancel</button>
-                                <button onClick={handleSave} className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25">Save Slot</button>
+                                <button onClick={handleCloseModal} className="px-5 py-2.5 text-gray-500 font-bold hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Close</button>
+                                <button onClick={handleSave} className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25">Save Changes</button>
                             </div>
                         </div>
                     </div>
@@ -628,7 +636,7 @@ export default function FlyingSlotsRoot() {
                                     </div>
                                 </div>
                                 {slot.extremeWeatherWarning && <div className="text-xs mt-2 text-red-500 font-medium italic">⚠️ {slot.extremeWeatherWarning}</div>}
-                                <button onClick={() => handleDeleteSchedule(slot.id)} className="mt-3 text-[10px] text-gray-400 hover:text-red-500 uppercase tracking-widest font-bold transition-colors">Delete Record</button>
+                                {!isStudent && <button onClick={() => handleDeleteSchedule(slot.id)} className="mt-3 text-[10px] text-gray-400 hover:text-red-500 uppercase tracking-widest font-bold transition-colors">Delete Record</button>}
                             </div>
                         ))}
                     </div>

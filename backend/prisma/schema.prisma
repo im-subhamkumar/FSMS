@@ -24,7 +24,6 @@ model User {
   // Relations for Flying Slots
   sessionsAsStudent    FlyingSlot[]  @relation("StudentSessions")
   sessionsAsInstructor FlyingSlot[]  @relation("InstructorSessions")
-  requestsAsStudent    SlotRequest[] @relation("StudentRequests")
 
   // Documents and other relations
   studentDocuments    Document[]            @relation("StudentDocs")
@@ -190,7 +189,7 @@ model SlotRequest {
   status               RequestStatus @default(PENDING)
 
   studentId Int
-  student   User @relation("StudentRequests", fields: [studentId], references: [id])
+  student   Student @relation("StudentRequests", fields: [studentId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -340,8 +339,9 @@ model Student {
   licenses  StudentLicense[]
   medicals  StudentMedical[]
   documents StudentDocument[]
-  account   StudentAccount?
-  invoices  Invoice[]
+  account      StudentAccount?
+  invoices     Invoice[]
+  slotRequests SlotRequest[] @relation("StudentRequests")
 
   @@map("students")
 }
@@ -641,21 +641,21 @@ enum InvoiceStatus {
 }
 
 model Schedule {
-  id                    Int      @id @default(autoincrement())
-  traineeId             Int
-  traineeName           String?  @db.VarChar(200)
-  instructorId          Int
-  instructorName        String?  @db.VarChar(200)
-  aircraftId            String   @db.VarChar(50)
-  flightType            String   @default("Dual") @db.VarChar(50)
-  startTime             DateTime
-  endTime               DateTime
-  status                String   @default("SCHEDULED") // SCHEDULED, CANCELLED, COMPLETED
-  cancellationReason    String?  @db.Text
-  weatherVerdict        String?  @db.VarChar(50) // GO, NO-GO
-  extremeWeatherWarning String?  @db.Text
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                 Int      @id @default(autoincrement())
+  traineeId          Int
+  traineeName        String?  @db.VarChar(200)
+  instructorId       Int
+  instructorName     String?  @db.VarChar(200)
+  aircraftId         String   @db.VarChar(50)
+  flightType         String   @default("Dual") @db.VarChar(50)
+  startTime          DateTime
+  endTime            DateTime
+  status             String   @default("SCHEDULED") // SCHEDULED, CANCELLED, COMPLETED
+  cancellationReason String?  @db.Text
+  weatherVerdict     String?  @db.VarChar(50) // GO, NO-GO
+  extremeWeatherWarning String? @db.Text
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@map("schedules")
 }

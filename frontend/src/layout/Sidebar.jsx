@@ -11,30 +11,34 @@ import { useAppStore } from '../store/useAppStore';
 const navGroups = [
     {
         label: "Overview",
+        roles: ['Admin', 'Instructor', 'Student'],
         items: [
             { id: 'T0', name: 'Dashboard', icon: LayoutDashboard, path: '/' },
         ]
     },
     {
         label: "People",
+        roles: ['Admin'],
         items: [
             { id: 'T1', name: 'Students', icon: Users, path: '/students' },
-            { id: 'T2', name: 'Instructors', icon: GraduationCap, path: '/instructors' },
+            { id: 'T2', name: 'Instructors', icon: GraduationCap, path: '/instructors', roles: ['Admin'] },
         ]
     },
     {
         label: "Operations",
+        roles: ['Admin', 'Instructor', 'Student'],
         items: [
-            { id: 'T3', name: 'Aircraft', icon: Plane, path: '/aircraft' },
-            { id: 'T4', name: 'Flying Slots', icon: CalendarDays, path: '/flying-slots' },
-            { id: 'T5', name: 'Slot Requests', icon: CalendarPlus, path: '/slot-requests' },
-            { id: 'T6', name: 'Dispatch Board', icon: MonitorPlay, path: '/dispatch-board' },
-            { id: 'T7', name: 'Maintenance Blocks', icon: Wrench, path: '/maintenance-blocks' },
-            { id: 'T8', name: 'Weather Holds', icon: CloudLightning, path: '/weather-holds' },
+            { id: 'T3', name: 'Aircraft', icon: Plane, path: '/aircraft', roles: ['Admin'] },
+            { id: 'T4', name: 'Flying Slots', icon: CalendarDays, path: '/flying-slots', roles: ['Admin', 'Instructor', 'Student'] },
+            { id: 'T5', name: 'Slot Requests', icon: CalendarPlus, path: '/slot-requests', roles: ['Admin', 'Student'] },
+            { id: 'T6', name: 'Dispatch Board', icon: MonitorPlay, path: '/dispatch-board', roles: ['Admin'] },
+            { id: 'T7', name: 'Maintenance Blocks', icon: Wrench, path: '/maintenance-blocks', roles: ['Admin'] },
+            { id: 'T8', name: 'Weather Holds', icon: CloudLightning, path: '/weather-holds', roles: ['Admin'] },
         ]
     },
     {
         label: "Academics",
+        roles: ['Admin'],
         items: [
             { id: 'T9', name: 'Courses', icon: BookOpen, path: '/courses' },
             { id: 'T10', name: 'Qualification Types', icon: BadgeCheck, path: '/qualification-types' },
@@ -43,20 +47,23 @@ const navGroups = [
     },
     {
         label: "Documents",
+        roles: ['Admin', 'Instructor', 'Student'],
         items: [
-            { id: 'T12', name: 'Document Categories', icon: FolderTree, path: '/document-categories' },
-            { id: 'T13', name: 'Documents', icon: Files, path: '/documents' },
+            { id: 'T12', name: 'Document Categories', icon: FolderTree, path: '/document-categories', roles: ['Admin'] },
+            { id: 'T13', name: 'Documents', icon: Files, path: '/documents', roles: ['Admin', 'Instructor', 'Student'] },
         ]
     },
     {
         label: "Finance",
+        roles: ['Admin', 'Student'],
         items: [
-            { id: 'T14', name: 'Pricing Rates', icon: Tags, path: '/pricing-rates' },
-            { id: 'T15', name: 'Invoices', icon: Receipt, path: '/invoices' },
+            { id: 'T14', name: 'Pricing Rates', icon: Tags, path: '/pricing-rates', roles: ['Admin'] },
+            { id: 'T15', name: 'Invoices', icon: Receipt, path: '/invoices', roles: ['Admin', 'Student'] },
         ]
     },
     {
         label: "Insights",
+        roles: ['Admin'],
         items: [
             { id: 'T16', name: 'Reports Dashboard', icon: BarChart3, path: '/reports-dashboard' },
             { id: 'T17', name: 'Analytics Dashboard', icon: PieChart, path: '/analytics-dashboard' },
@@ -64,6 +71,7 @@ const navGroups = [
     },
     {
         label: "System",
+        roles: ['Admin'],
         items: [
             { id: 'T18', name: 'Notifications', icon: Bell, path: '/notifications' },
             { id: 'T19', name: 'Audit Logs', icon: History, path: '/audit-logs' },
@@ -72,7 +80,21 @@ const navGroups = [
 ];
 
 export const Sidebar = () => {
-    const { sidebarOpen } = useAppStore();
+    const { sidebarOpen, user } = useAppStore();
+    const userRole = user?.role || 'Admin';
+
+    // Filter groups and items based on role
+    const filteredNavGroups = navGroups.map(group => {
+        if (group.roles && !group.roles.includes(userRole)) return null;
+        
+        const filteredItems = group.items.filter(item => 
+            !item.roles || item.roles.includes(userRole)
+        );
+
+        if (filteredItems.length === 0) return null;
+
+        return { ...group, items: filteredItems };
+    }).filter(Boolean);
 
     return (
         <aside
@@ -97,7 +119,7 @@ export const Sidebar = () => {
 
                 {/* Navigation */}
                 <nav className="flex-1 space-y-5 p-3 overflow-x-hidden pt-5">
-                    {navGroups.map((group, idx) => (
+                    {filteredNavGroups.map((group, idx) => (
                         <div key={idx}>
                             {sidebarOpen ? (
                                 <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 dark:text-gray-400">
