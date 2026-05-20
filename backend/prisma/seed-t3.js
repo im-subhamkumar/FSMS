@@ -338,8 +338,69 @@ async function main() {
   }
   console.log(`  [6/6] Invoices seeded: ${billingPlan.length} (with ${billingPlan.reduce((s, b) => s + 1 + (b.flyHrs > 0 ? 2 : 0) + (['PPL-01','CPL-01'].includes(b.courseCode) ? 1 : 0), 0)} line items)`);
 
-  console.log('\nDone! Invoices & Report Dashboard now have realistic, interlinked data.');
-  console.log('  Courses → PricingRates → InvoiceItems → Invoices');
+  // ── 7. Aircraft & Maintenance ──────────────────────────────
+  const aircraftData = [
+    { id: 'AC-1001', tailNumber: 'VT-ABC', name: 'Cessna 172 Skyhawk', model: '172S', manufacturer: 'Cessna', yearOfManufacture: 2015, status: 'Active', availability: 'Available', type: 'Trainer' },
+    { id: 'AC-1002', tailNumber: 'VT-DEF', name: 'Diamond DA40', model: 'DA40', manufacturer: 'Diamond', yearOfManufacture: 2018, status: 'Active', availability: 'Available', type: 'Trainer' },
+    { id: 'AC-1003', tailNumber: 'VT-GHI', name: 'Piper PA28', model: 'PA28', manufacturer: 'Piper', yearOfManufacture: 2012, status: 'Active', availability: 'Available', type: 'Trainer' },
+    { id: 'AC-1004', tailNumber: 'VT-JKL', name: 'Cessna 152', model: '152', manufacturer: 'Cessna', yearOfManufacture: 2008, status: 'In_Maintenance', availability: 'Unavailable', type: 'Trainer' },
+  ];
+  for (const ac of aircraftData) {
+    await prisma.aircraft.upsert({ where: { id: ac.id }, update: {}, create: ac });
+  }
+
+  await prisma.squawk.createMany({
+    data: [
+      { aircraftId: 'AC-1001', issue: 'Right main tire worn', severity: 'Normal', status: 'Open' },
+      { aircraftId: 'AC-1004', issue: '100-hour inspection due', severity: 'High', status: 'Open' }
+    ]
+  });
+  console.log('  [7/10] Aircraft & Squawks seeded');
+
+  // ── 8. Documents & Categories ───────────────────────────────
+  const cat1 = await prisma.documentCategory.upsert({ where: { name: 'Training Manuals' }, update: {}, create: { name: 'Training Manuals' } });
+  const cat2 = await prisma.documentCategory.upsert({ where: { name: 'Medical Certificates' }, update: {}, create: { name: 'Medical Certificates', requiresExpiry: true } });
+
+  await prisma.document.create({
+    data: {
+      title: 'Cessna 172 POH', categoryId: cat1.id, status: 'ACTIVE',
+      versions: { create: [{ originalName: 'C172_POH.pdf', fileUrl: 'https://example.com/c172.pdf', mimeType: 'application/pdf', size: 1024000 }] }
+    }
+  });
+  console.log('  [8/10] Documents seeded');
+
+  // ── 9. Student Details ──────────────────────────────────────
+  if (students.length >= 2) {
+    await prisma.studentLicense.create({ data: { studentId: students[0].id, licenseNumber: 'SPL-001', licenseType: 'SPL', issueDate: new Date('2025-11-15'), expiryDate: new Date('2027-11-15') }});
+    await prisma.studentMedical.create({ data: { studentId: students[0].id, medicalCertificateNumber: 'MED-001', issueDate: new Date('2025-11-15'), expiryDate: new Date('2026-11-15') }});
+    
+    await prisma.studentLicense.create({ data: { studentId: students[1].id, licenseNumber: 'PPL-002', licenseType: 'PPL', issueDate: new Date('2024-05-10'), expiryDate: new Date('2029-05-10') }});
+    await prisma.studentMedical.create({ data: { studentId: students[1].id, medicalCertificateNumber: 'MED-002', issueDate: new Date('2024-05-10'), expiryDate: new Date('2025-05-10') }});
+  }
+  console.log('  [9/10] Student Licenses/Medicals seeded');
+
+  // ── 10. Schedules & Weather ─────────────────────────────────
+  const recentSlots = await prisma.flyingSlot.findMany({ take: 5, include: { student: true, instructor: true } });
+  for (const s of recentSlots) {
+    const sDate = new Date(s.date);
+    // Rough estimate for startTime/endTime
+    sDate.setHours(8, 0, 0); 
+    const eDate = new Date(s.date);
+    eDate.setHours(10, 0, 0);
+
+    await prisma.schedule.create({
+      data: {
+        traineeId: s.studentId, traineeName: `${s.student.firstName} ${s.student.lastName}`,
+        instructorId: s.instructorId, instructorName: `${s.instructor.firstName} ${s.instructor.lastName}`,
+        aircraftId: s.aircraft || 'VT-ABC', startTime: sDate, endTime: eDate, status: s.status
+      }
+    });
+  }
+  
+  await prisma.weatherCheck.create({ data: { icao: 'VIDP', verdict: 'GO', flightCategory: 'VFR', temperatureC: 25, checkedBy: 'system' } });
+  console.log('  [10/10] Schedules & Weather seeded');
+
+  console.log('\nDone! Database now has rich, comprehensive data across all interconnected modules.');
 }
 
 main()

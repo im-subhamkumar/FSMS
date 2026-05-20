@@ -99,17 +99,17 @@ export default function InvoiceList() {
   };
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="flex flex-col h-full space-y-5">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Invoices</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage student billing and payment records</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Invoices</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage student billing and payment records</p>
         </div>
         {/* Create Invoice page navigation */}
         <button
           onClick={() => navigate('/invoices/new')}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md active:scale-95"
+          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-6 py-2.5 rounded-xl shadow-lg shadow-indigo-500/30 transition-all duration-300 hover:-translate-y-0.5 font-semibold text-sm active:scale-95"
         >
           <Plus className="w-4 h-4" />
           Create Invoice
@@ -125,7 +125,7 @@ export default function InvoiceList() {
       />
 
       {/* Filters Bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4 flex flex-wrap gap-3 items-center shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 flex flex-wrap gap-3 items-center shadow-sm">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -133,7 +133,7 @@ export default function InvoiceList() {
             placeholder="Search invoice #, student name, email…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:text-gray-200 transition-all"
+            className="w-full pl-9 pr-4 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:text-gray-200 transition-all"
           />
         </div>
 
@@ -142,7 +142,7 @@ export default function InvoiceList() {
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all"
+            className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all"
           >
             {STATUS_OPTIONS.map(s => (
               <option key={s} value={s}>{s || 'All Statuses'}</option>
@@ -151,11 +151,11 @@ export default function InvoiceList() {
         </div>
 
         <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
-          className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all"
+          className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all"
         />
         <span className="text-gray-400 text-sm">to</span>
         <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
-          className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all"
+          className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:text-gray-200 transition-all"
         />
 
         <button onClick={fetchData}
@@ -166,7 +166,7 @@ export default function InvoiceList() {
       </div>
 
       {/* Searchable invoice table */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex-1">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex-1">
         {error ? (
           <div className="flex flex-col items-center justify-center h-48 text-red-500 gap-2">
             <p className="font-semibold">{error}</p>
@@ -175,7 +175,7 @@ export default function InvoiceList() {
         ) : loading ? (
           <div className="p-6 space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 rounded-lg bg-gray-100 dark:bg-gray-700 animate-pulse" />
+              <div key={i} className="h-10 rounded-lg bg-gray-100 dark:bg-gray-700 animate-pulse" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -194,7 +194,7 @@ export default function InvoiceList() {
                 <thead className="bg-gray-50 dark:bg-gray-900/50">
                   <tr>
                     {['Invoice #', 'Student', 'Issued Date', 'Due Date', 'Amount', 'Status', ''].map(h => (
-                      <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th key={h} className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {h}
                       </th>
                     ))}
@@ -207,12 +207,12 @@ export default function InvoiceList() {
                       onClick={() => navigate(`/invoices/${inv.id}`)}
                       className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors group"
                     >
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-3">
                         <span className="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400">
                           {inv.invoiceNumber}
                         </span>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-3">
                         <div className="flex flex-col">
                           <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {inv.student?.firstName} {inv.student?.lastName}
@@ -220,16 +220,16 @@ export default function InvoiceList() {
                           <span className="text-xs text-gray-400">{inv.student?.email}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400">{fmtDate(inv.issuedDate)}</td>
-                      <td className={`px-5 py-4 text-sm ${inv.status === 'OVERDUE' ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'}`}>
+                      <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400">{fmtDate(inv.issuedDate)}</td>
+                      <td className={`px-5 py-3 text-sm ${inv.status === 'OVERDUE' ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'}`}>
                         {fmtDate(inv.dueDate)}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-3">
                         <span className="text-sm font-bold text-gray-900 dark:text-gray-100">₹{fmt(inv.amount)}</span>
                       </td>
-                      <td className="px-5 py-4"><StatusBadge status={inv.status} /></td>
+                      <td className="px-5 py-3"><StatusBadge status={inv.status} /></td>
                       {/* Hover-reveal quick actions — pattern from Student module */}
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-3">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           {inv.status === 'PENDING' && (
                             <>
@@ -259,7 +259,7 @@ export default function InvoiceList() {
             </div>
 
             {/* Pagination footer — pattern from Student module StudentsRoot */}
-            <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
+            <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Showing <span className="font-medium text-gray-900 dark:text-white">{filtered.length > 0 ? first + 1 : 0}</span> to{' '}
                 <span className="font-medium text-gray-900 dark:text-white">{Math.min(last, filtered.length)}</span> of{' '}
