@@ -124,6 +124,11 @@ app.use('/api/invoices', invoicesRouter);
 import reportRoutes from './routes/reportRoutes.js';
 app.use('/api/reports', reportRoutes);
 
+// Analytics Dashboard
+import analyticsRouter from './routes/analytics.js';
+app.use('/api/analytics', analyticsRouter);
+
+
 // 404 handler — catches all unmatched routes
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
@@ -152,3 +157,4 @@ process.on('SIGINT', async () => {
   await prisma.$disconnect();
   process.exit(0);
 });
+// Touch to trigger nodemon reload after updating database port

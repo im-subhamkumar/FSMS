@@ -81,8 +81,13 @@ async function checkWeatherForSchedule(schedule) {
         };
 
         if (gonogo.verdict === 'NO-GO' || extremeWarning) {
+            updateData.status = 'CANCELLED';
+            updateData.weatherVerdict = 'NO-GO';
+            // Only include METAR-based reasons when the METAR itself said NO-GO
+            // Otherwise we get confusing messages like "✅ All safe... | 🌧️ Heavy Rain"
+            const metarReasons = gonogo.verdict === 'NO-GO' ? (gonogo.reasons || []) : [];
             updateData.cancellationReason = [
-                ...(gonogo.reasons || []),
+                ...metarReasons,
                 extremeWarning
             ].filter(Boolean).join(' | ');
             console.log(`[SAFETY] Weather issue detected for ID ${schedule.id}: ${updateData.cancellationReason}`);
@@ -272,6 +277,7 @@ router.put('/:id', async (req, res) => {
         
         res.json(updated);
     } catch (err) {
+
         console.error('[SCHEDULE] Update failed:', err);
         res.status(500).json({ error: err.message });
     }

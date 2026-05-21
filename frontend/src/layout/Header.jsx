@@ -1,11 +1,59 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Menu, Bell, Search, User, Sun, Moon, LogOut, Settings as SettingsIcon, X } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
+const MODULE_ROUTES = [
+    { name: 'Dashboard', path: '/' },
+    { name: 'Students', path: '/students' },
+    { name: 'Instructors', path: '/instructors' },
+    { name: 'Aircraft', path: '/aircraft' },
+    { name: 'Flying Slots', path: '/flying-slots' },
+    { name: 'Slot Requests', path: '/slot-requests' },
+    { name: 'Dispatch Board', path: '/dispatch-board' },
+    { name: 'Maintenance Blocks', path: '/maintenance-blocks' },
+    { name: 'Weather Holds', path: '/weather-holds' },
+    { name: 'Courses', path: '/courses' },
+    { name: 'Qualification Types', path: '/qualification-types' },
+    { name: 'Qualification Records', path: '/qualification-records' },
+    { name: 'Document Categories', path: '/document-categories' },
+    { name: 'Documents', path: '/documents' },
+    { name: 'Pricing Rates', path: '/pricing-rates' },
+    { name: 'Invoices', path: '/invoices' },
+    { name: 'Reports Dashboard', path: '/reports-dashboard' },
+    { name: 'Analytics Dashboard', path: '/analytics-dashboard' },
+    { name: 'Notifications', path: '/notifications' },
+    { name: 'Audit Logs', path: '/audit-logs' },
+];
+
 export const Header = () => {
+    const navigate = useNavigate();
     const { toggleSidebar, user, logout, notifications, removeNotification, markAllRead, theme, toggleTheme } = useAppStore();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
+    
+    // Search state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showSearchResults, setShowSearchResults] = useState(false);
+    const searchInputRef = useRef(null);
+
+    const filteredRoutes = useMemo(() => {
+        if (!searchQuery.trim()) return [];
+        const lowerQ = searchQuery.toLowerCase();
+        return MODULE_ROUTES.filter(r => r.name.toLowerCase().includes(lowerQ));
+    }, [searchQuery]);
+
+    // Keyboard shortcut for search
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
     
     const notifRef = useRef(null);
     const profileRef = useRef(null);
@@ -36,13 +84,49 @@ export const Header = () => {
                 <div className="hidden sm:flex max-w-md items-center relative group">
                     <Search className="absolute left-3 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                     <input
+                        ref={searchInputRef}
                         type="text"
+                        value={searchQuery}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setShowSearchResults(true);
+                        }}
+                        onFocus={() => setShowSearchResults(true)}
+                        onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
                         className="w-[280px] lg:w-[400px] rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:focus:bg-gray-900"
-                        placeholder="Search instructors, records, modules..."
+                        placeholder="Search modules (e.g. Analytics)..."
                     />
                     <div className="absolute right-3 hidden lg:flex items-center gap-1 opacity-100 transition-opacity">
                         <kbd className="inline-flex items-center border border-gray-200 bg-white rounded px-2 py-0.5 font-sans text-xs font-semibold text-gray-400 dark:border-gray-700 dark:bg-gray-800">Ctrl K</kbd>
                     </div>
+                    {showSearchResults && searchQuery.trim() && (
+                        <div className="absolute top-full left-0 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl overflow-hidden z-50">
+                            {filteredRoutes.length > 0 ? (
+                                <ul className="max-h-64 overflow-y-auto custom-scrollbar py-2">
+                                    {filteredRoutes.map((route) => (
+                                        <li key={route.path}>
+                                            <button
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    navigate(route.path);
+                                                    setSearchQuery('');
+                                                    setShowSearchResults(false);
+                                                }}
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-200 transition-colors flex items-center justify-between group"
+                                            >
+                                                <span>{route.name}</span>
+                                                <span className="text-xs text-gray-400 group-hover:text-blue-500 transition-colors">Jump to</span>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                                    No modules found matching "{searchQuery}"
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -111,10 +111,10 @@ export default function FlyingSlotsRoot() {
                         traineeId: s.traineeId,
                         instructor: s.instructorName || `Instructor #${s.instructorId}`,
                         instructorId: s.instructorId,
-                        aircraft: s.aircraftId,
                         flightType: s.flightType || 'Dual',
-                        status: s.status === 'SCHEDULED' ? 'Scheduled' : s.status === 'CANCELLED' ? 'Cancelled' : s.status,
+                        status: s.status === 'SCHEDULED' ? 'Scheduled' : s.status === 'CANCELLED' ? 'Cancelled' : s.status === 'AWAITING' ? 'Awaiting' : s.status,
                         weatherVerdict: s.weatherVerdict,
+
                         extremeWeatherWarning: s.extremeWeatherWarning,
                         cancellationReason: s.cancellationReason
                     };
@@ -214,6 +214,7 @@ export default function FlyingSlotsRoot() {
                 const errData = await response.json();
                 alert(errData.error || 'Failed to save slot');
             }
+
         } catch (error) {
             console.error('Error saving slot:', error);
             alert('An unexpected error occurred.');
@@ -292,9 +293,14 @@ export default function FlyingSlotsRoot() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900 dark:text-white">{slot.date}</div>
                                         <div className="text-sm text-gray-500 dark:text-gray-400">{slot.startTime} - {slot.endTime}</div>
-                                        {slot.weatherVerdict && (
+                                        {slot.weatherVerdict && slot.status !== 'Cancelled' && (
                                             <div className={`mt-1 text-[10px] font-bold uppercase inline-flex items-center px-1.5 py-0.5 rounded-md ${slot.weatherVerdict === 'GO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                 {slot.weatherVerdict}
+                                            </div>
+                                        )}
+                                        {slot.status === 'Cancelled' && slot.cancellationReason && (
+                                            <div className="mt-1 text-[10px] font-bold uppercase inline-flex items-center px-1.5 py-0.5 rounded-md bg-red-100 text-red-700">
+                                                NO-GO
                                             </div>
                                         )}
                                     </td>
@@ -457,9 +463,23 @@ export default function FlyingSlotsRoot() {
                                             <div key={slot.id} onClick={() => { if (!isStudent) handleOpenModal(slot); }} className={`p-4 rounded-xl border shadow-sm ${isStudent ? '' : 'cursor-pointer hover:scale-[1.01] hover:shadow-md'} ${slot.status === 'Completed' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : slot.status === 'Cancelled' ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'} transition-all relative overflow-hidden`}>
                                                 <div className="flex justify-between items-start">
                                                     <div>
-                                                        <div className="font-bold text-gray-900 dark:text-white">{slot.startTime} - {slot.endTime}</div>
-                                                        <div className="text-sm font-medium">{slot.student} w/ {slot.instructor}</div>
-                                                        <div className="text-xs text-gray-500 mt-1 font-mono">{slot.aircraft}</div>
+                                                        <div className="font-bold text-gray-900 dark:text-white text-base mb-1">{slot.startTime} &rarr; {slot.endTime}</div>
+                                                        <div className="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                                            <div className="h-6 w-6 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center text-xs">{slot.student.charAt(0)}</div>
+                                                            {slot.student} <span className="text-gray-400 mx-1">with</span> {slot.instructor}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-mono bg-white/50 dark:bg-black/20 inline-block px-2 py-1 rounded">{slot.aircraft}</div>
+                                                        
+                                                        {slot.weatherVerdict && slot.status !== 'Cancelled' && (
+                                                            <div className={`ml-2 text-[10px] font-bold uppercase inline-flex items-center px-1.5 py-0.5 rounded-md ${slot.weatherVerdict === 'GO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                                Weather: {slot.weatherVerdict}
+                                                            </div>
+                                                        )}
+                                                        {slot.status === 'Cancelled' && slot.cancellationReason && (
+                                                            <div className="ml-2 text-[10px] font-bold uppercase inline-flex items-center px-1.5 py-0.5 rounded-md bg-red-100 text-red-700">
+                                                                Weather: NO-GO
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <span className={`px-2 py-1 rounded text-[10px] font-bold border ${getStatusStyles(slot.status)}`}>
                                                         {slot.status}
@@ -610,6 +630,32 @@ export default function FlyingSlotsRoot() {
                                     </div>
                                 </div>
                             )}
+
+                            {(formData.weatherVerdict || formData.status === 'CANCELLED') && (() => {
+                                // If the slot is CANCELLED, the effective verdict is always NO-GO
+                                const effectiveVerdict = formData.status === 'CANCELLED' ? 'NO-GO' : (formData.weatherVerdict || 'GO');
+                                const isGo = effectiveVerdict === 'GO';
+                                // Clean cancellation reason: strip out "all safe" messages from stale data
+                                let cleanReason = formData.cancellationReason || '';
+                                if (formData.status === 'CANCELLED' && cleanReason) {
+                                    cleanReason = cleanReason
+                                        .split(' | ')
+                                        .filter(part => !part.includes('All weather parameters within safe limits'))
+                                        .join(' | ');
+                                }
+                                return (
+                                    <div className={`mt-4 p-4 rounded-xl text-sm ${isGo ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'}`}>
+                                        <div className="font-bold flex items-center gap-1.5 mb-1">{isGo ? '✅ Weather: GO' : '❌ Weather: NO-GO'}</div>
+                                        {cleanReason && <p className="opacity-90">{cleanReason}</p>}
+                                    </div>
+                                );
+                            })()}
+                            {formData.extremeWeatherWarning && (
+                                <div className="mt-2 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm font-medium animate-pulse">
+                                    {formData.extremeWeatherWarning}
+                                </div>
+                            )}
+
                             <div className="flex justify-end gap-3 mt-8 border-t pt-5 dark:border-gray-700">
                                 <button onClick={handleCloseModal} className="px-5 py-2.5 text-gray-500 font-bold hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Close</button>
                                 <button onClick={handleSave} className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25">Save Changes</button>
@@ -617,7 +663,7 @@ export default function FlyingSlotsRoot() {
                         </div>
                     </div>
                 </div>
-            )}
+            ) }}
             
             {/* Weather Detail Section */}
             {schedules.length > 0 && viewMode === 'list' && (
