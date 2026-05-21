@@ -660,12 +660,10 @@ export default function FlyingSlotsRoot() {
                                 <button onClick={handleCloseModal} className="px-5 py-2.5 text-gray-500 font-bold hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Close</button>
                                 <button onClick={handleSave} className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25">Save Changes</button>
                             </div>
-
-                            </div>
                         </div>
                     </div>
                 </div>
-            )}
+            ) }}
             
             {/* Weather Detail Section */}
             {schedules.length > 0 && viewMode === 'list' && (
