@@ -89,11 +89,20 @@ export default function QualificationTypesRoot() {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this qualification type?')) return;
+    const handleToggleActive = async (type) => {
         try {
-            const res = await fetch(`${API_BASE}/qualification-types/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to deactivate');
+            let res;
+            if (type.isActive) {
+                res = await fetch(`${API_BASE}/qualification-types/${type.id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Failed to deactivate');
+            } else {
+                res = await fetch(`${API_BASE}/qualification-types/${type.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ isActive: true })
+                });
+                if (!res.ok) throw new Error('Failed to reactivate');
+            }
             setDeleteConfirm(null);
             await fetchTypes();
         } catch (err) {
@@ -217,8 +226,12 @@ export default function QualificationTypesRoot() {
                                                 </button>
                                                 <button
                                                     onClick={() => setDeleteConfirm(type)}
-                                                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                                                    title="Deactivate"
+                                                    className={`p-1.5 rounded-lg transition-colors ${
+                                                        type.isActive
+                                                            ? 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30'
+                                                            : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'
+                                                    }`}
+                                                    title={type.isActive ? 'Deactivate' : 'Reactivate'}
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -311,17 +324,30 @@ export default function QualificationTypesRoot() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 rounded-xl bg-red-100 dark:bg-red-900/30">
-                                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            <div className={`p-2 rounded-xl ${deleteConfirm.isActive ? 'bg-red-100 dark:bg-red-900/30' : 'bg-emerald-100 dark:bg-emerald-900/30'}`}>
+                                <Trash2 className={`w-5 h-5 ${deleteConfirm.isActive ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`} />
                             </div>
                             <div>
-                                <h3 className="font-bold text-gray-900 dark:text-white">Deactivate Type</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">This will mark the type as inactive</p>
+                                <h3 className="font-bold text-gray-900 dark:text-white">{deleteConfirm.isActive ? 'Deactivate Type' : 'Reactivate Type'}</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {deleteConfirm.isActive ? 'This will mark the type as inactive' : 'This will restore the type as active'}
+                                </p>
                             </div>
                         </div>
                         <div className="p-6 bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
                             <button type="button" onClick={() => setDeleteConfirm(null)} className="px-5 py-2 text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-colors">Cancel</button>
-                            <button type="button" onClick={() => handleDelete(deleteConfirm.id)} className="flex items-center gap-2 px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-red-500/20"><Trash2 className="w-4 h-4" /> Deactivate</button>
+                            <button
+                                type="button"
+                                onClick={() => handleToggleActive(deleteConfirm)}
+                                className={`flex items-center gap-2 px-6 py-2 text-white font-bold rounded-xl transition-all ${
+                                    deleteConfirm.isActive
+                                        ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/20'
+                                        : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20'
+                                }`}
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                {deleteConfirm.isActive ? 'Deactivate' : 'Reactivate'}
+                            </button>
                         </div>
                     </div>
                 </div>
