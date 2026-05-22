@@ -1,5 +1,5 @@
 import express from 'express';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -24,92 +24,79 @@ function getRecordStatus(expiryDate) {
   return 'VALID';
 }
 
-function toLegacyDbStatus(appStatus) {
-  if (appStatus === 'EXPIRED') return 'EXPIRED';
-  return 'ACTIVE';
-}
-
-function addDays(dateValue, days) {
-  const date = new Date(dateValue);
-  date.setDate(date.getDate() + days);
-  return date;
-}
-
-function mapUserToStudent(user) {
+function mapStudent(student) {
   return {
-    id: user.id,
-    studentId: `STU-${String(user.id).padStart(4, '0')}`,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    batch: 'Demo Batch',
+    id: student.id,
+    studentId: student.studentId,
+    firstName: student.firstName,
+    lastName: student.lastName,
+    email: student.email,
+    batch: student.batch,
   };
 }
 
-function mapUserToInstructor(user) {
+function mapInstructor(instructor) {
   return {
-    id: user.id,
-    employeeId: `INST-${String(user.id).padStart(4, '0')}`,
-    designation: 'FLIGHT_INSTRUCTOR',
-    employmentStatus: 'ACTIVE',
+    id: instructor.id,
+    employeeId: instructor.employeeId,
+    designation: instructor.designation,
+    employmentStatus: instructor.employmentStatus,
     user: {
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
+      firstName: instructor.firstName,
+      lastName: instructor.lastName,
+      email: instructor.email,
     },
   };
 }
 
-function mapHolder(user) {
-  if (!user) {
+function mapHolder(row) {
+  if (row.instructorId) {
     return {
-      type: 'UNASSIGNED',
-      id: null,
-      label: 'Unassigned',
-      meta: null,
+      type: 'INSTRUCTOR',
+      id: row.instructorId,
+      label: `${row.instructorFirstName || ''} ${row.instructorLastName || ''}`.trim(),
+      meta: {
+        employeeId: row.employeeId,
+        email: row.instructorEmail,
+        designation: row.designation,
+      },
     };
   }
 
-  if (user.role === 'INSTRUCTOR') {
+  if (row.studentId) {
     return {
-      type: 'INSTRUCTOR',
-      id: user.id,
-      label: `${user.firstName} ${user.lastName}`.trim(),
+      type: 'STUDENT',
+      id: row.studentId,
+      label: `${row.studentFirstName || ''} ${row.studentLastName || ''}`.trim(),
       meta: {
-        employeeId: `INST-${String(user.id).padStart(4, '0')}`,
-        email: user.email,
-        designation: 'FLIGHT_INSTRUCTOR',
+        studentId: row.studentCode,
+        email: row.studentEmail,
+        batch: row.studentBatch,
       },
     };
   }
 
   return {
-    type: 'STUDENT',
-    id: user.id,
-    label: `${user.firstName} ${user.lastName}`.trim(),
-    meta: {
-      studentId: `STU-${String(user.id).padStart(4, '0')}`,
-      email: user.email,
-      batch: 'Demo Batch',
-    },
+    type: 'UNASSIGNED',
+    id: null,
+    label: 'Unassigned',
+    meta: null,
   };
 }
 
 function mapRecord(row) {
   const holder = mapHolder(row);
-  const issueDate = row.issuedOn;
-  const expiryDate = row.expiresOn;
 
   return {
     id: row.id,
     qualificationTypeId: row.qualificationTypeId,
-    studentId: holder.type === 'STUDENT' ? row.userId : null,
-    instructorId: holder.type === 'INSTRUCTOR' ? row.userId : null,
-    issueDate,
-    expiryDate,
-    certificateNumber: row.qualificationNumber,
+    studentId: row.studentId,
+    instructorId: row.instructorId,
+    issueDate: row.issueDate,
+    expiryDate: row.expiryDate,
+    certificateNumber: row.certificateNumber,
     issuingAuthority: row.issuingAuthority,
-    notes: row.remarks,
+    notes: row.notes,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     qualificationType: {
@@ -117,42 +104,51 @@ function mapRecord(row) {
       code: row.typeCode,
       name: row.typeName,
       description: row.typeDescription,
-      validityDays: row.typeValidityDays,
+      validityDays: null,
       isActive: Boolean(row.typeIsActive),
     },
-    status: getRecordStatus(expiryDate),
+    status: getRecordStatus(row.expiryDate),
     holder,
   };
 }
 
-async function getUsersByRole(role) {
-  return prisma.$queryRaw`
-    SELECT id, firstName, lastName, email, role
-    FROM users
-    WHERE role = ${role} AND isActive = true
+async function getStudents() {
+  const rows = await prisma.$queryRaw`
+    SELECT id, studentId, firstName, lastName, email, batch
+    FROM students
     ORDER BY firstName ASC, lastName ASC
   `;
+
+  return rows.map(mapStudent);
 }
 
-async function getTypeValidityDays(qualificationTypeId) {
+async function getInstructors() {
   const rows = await prisma.$queryRaw`
-    SELECT validityDays
-    FROM qualification_types
-    WHERE id = ${qualificationTypeId}
-    LIMIT 1
+    SELECT
+      i.id,
+      i.employeeId,
+      i.designation,
+      i.employmentStatus,
+      u.firstName,
+      u.lastName,
+      u.email
+    FROM instructors i
+    JOIN users u ON u.id = i.userId
+    WHERE i.isDeleted = false
+    ORDER BY u.firstName ASC, u.lastName ASC
   `;
-  return rows[0]?.validityDays ?? null;
+
+  return rows.map(mapInstructor);
 }
 
 async function getLookupPayload() {
-  const [types, studentUsers, instructorUsers] = await Promise.all([
+  const [types, students, instructors] = await Promise.all([
     prisma.$queryRaw`
       SELECT
         qt.id,
         qt.code,
         qt.name,
         qt.description,
-        qt.validityDays,
         qt.isActive,
         qt.createdAt,
         qt.updatedAt,
@@ -164,8 +160,8 @@ async function getLookupPayload() {
       FROM qualification_types qt
       ORDER BY qt.name ASC
     `,
-    getUsersByRole('STUDENT'),
-    getUsersByRole('INSTRUCTOR'),
+    getStudents(),
+    getInstructors(),
   ]);
 
   return {
@@ -174,19 +170,19 @@ async function getLookupPayload() {
       code: row.code,
       name: row.name,
       description: row.description,
-      validityDays: row.validityDays,
+      validityDays: null,
       isActive: Boolean(row.isActive),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       _count: { records: Number(row.recordCount || 0) },
     })),
-    students: studentUsers.map(mapUserToStudent),
-    instructors: instructorUsers.map(mapUserToInstructor),
+    students,
+    instructors,
     warnings: [],
     counts: {
       types: types.length,
-      students: studentUsers.length,
-      instructors: instructorUsers.length,
+      students: students.length,
+      instructors: instructors.length,
     },
   };
 }
@@ -195,8 +191,6 @@ async function validatePayload(payload, recordId = null) {
   const qualificationTypeId = parseOptionalInt(payload.qualificationTypeId);
   const studentId = parseOptionalInt(payload.studentId);
   const instructorId = parseOptionalInt(payload.instructorId);
-  const userId = studentId || instructorId;
-  const expectedRole = instructorId ? 'INSTRUCTOR' : 'STUDENT';
 
   if (!qualificationTypeId) return { error: 'qualificationTypeId is required' };
   if ((studentId && instructorId) || (!studentId && !instructorId)) {
@@ -208,13 +202,12 @@ async function validatePayload(payload, recordId = null) {
   if (Number.isNaN(issueDate.getTime())) return { error: 'issueDate must be a valid date' };
 
   const typeRows = await prisma.$queryRaw`
-    SELECT id, validityDays
+    SELECT id
     FROM qualification_types
     WHERE id = ${qualificationTypeId}
     LIMIT 1
   `;
-  const qualificationType = typeRows[0];
-  if (!qualificationType) return { error: 'Qualification type not found' };
+  if (!typeRows.length) return { error: 'Qualification type not found' };
 
   let expiryDate = null;
   if (payload.expiryDate) {
@@ -222,58 +215,102 @@ async function validatePayload(payload, recordId = null) {
     if (Number.isNaN(expiryDate.getTime())) return { error: 'expiryDate must be a valid date' };
   }
 
-  const shouldAutoRecalculateExpiry =
-    payload.autoRecalculateExpiry === true ||
-    payload.autoRecalculateExpiry === 'true' ||
-    (!payload.expiryDate && Number.isInteger(qualificationType.validityDays) && qualificationType.validityDays > 0);
-
-  if (shouldAutoRecalculateExpiry && Number.isInteger(qualificationType.validityDays) && qualificationType.validityDays > 0) {
-    expiryDate = addDays(issueDate, qualificationType.validityDays);
-  }
-
   if (expiryDate && expiryDate < issueDate) {
     return { error: 'expiryDate cannot be earlier than issueDate' };
   }
 
-  const users = await prisma.$queryRaw`
-    SELECT id, role
-    FROM users
-    WHERE id = ${userId} AND isActive = true
-    LIMIT 1
-  `;
-  const holder = users[0];
-  if (!holder) return { error: `${expectedRole === 'INSTRUCTOR' ? 'Instructor' : 'Student'} not found` };
-  if (holder.role !== expectedRole) {
-    return { error: `Selected holder is not an ${expectedRole.toLowerCase()}` };
+  if (studentId) {
+    const studentRows = await prisma.$queryRaw`
+      SELECT id
+      FROM students
+      WHERE id = ${studentId}
+      LIMIT 1
+    `;
+    if (!studentRows.length) return { error: 'Student not found' };
+  }
+
+  if (instructorId) {
+    const instructorRows = await prisma.$queryRaw`
+      SELECT id
+      FROM instructors
+      WHERE id = ${instructorId} AND isDeleted = false
+      LIMIT 1
+    `;
+    if (!instructorRows.length) return { error: 'Instructor not found' };
   }
 
   const certificateNumber = payload.certificateNumber?.trim() || null;
   if (certificateNumber) {
-    const duplicates = await prisma.$queryRaw`
-      SELECT id
-      FROM qualification_records
-      WHERE qualificationNumber = ${certificateNumber}
-        AND (${recordId === null ? Prisma.sql`1 = 1` : Prisma.sql`id <> ${recordId}`})
-      LIMIT 1
-    `;
-    if (duplicates.length) return { error: 'Certificate number already exists' };
-  }
+    const duplicateRows = recordId === null
+      ? await prisma.$queryRaw`
+          SELECT id
+          FROM qualification_records
+          WHERE certificateNumber = ${certificateNumber}
+          LIMIT 1
+        `
+      : await prisma.$queryRaw`
+          SELECT id
+          FROM qualification_records
+          WHERE certificateNumber = ${certificateNumber}
+            AND id <> ${recordId}
+          LIMIT 1
+        `;
 
-  const recordStatus = getRecordStatus(expiryDate);
+    if (duplicateRows.length) return { error: 'Certificate number already exists' };
+  }
 
   return {
     data: {
       qualificationTypeId,
-      userId,
+      studentId,
+      instructorId,
       issueDate,
       expiryDate,
       certificateNumber,
       issuingAuthority: payload.issuingAuthority?.trim() || null,
       notes: payload.notes?.trim() || null,
-      recordStatus,
-      dbStatus: toLegacyDbStatus(recordStatus),
     },
   };
+}
+
+async function getRecordById(id) {
+  const rows = await prisma.$queryRaw`
+    SELECT
+      qr.id,
+      qr.qualificationTypeId,
+      qr.studentId,
+      qr.instructorId,
+      qr.issueDate,
+      qr.expiryDate,
+      qr.certificateNumber,
+      qr.issuingAuthority,
+      qr.notes,
+      qr.createdAt,
+      qr.updatedAt,
+      qt.code AS typeCode,
+      qt.name AS typeName,
+      qt.description AS typeDescription,
+      qt.isActive AS typeIsActive,
+      s.studentId AS studentCode,
+      s.firstName AS studentFirstName,
+      s.lastName AS studentLastName,
+      s.email AS studentEmail,
+      s.batch AS studentBatch,
+      i.employeeId,
+      i.designation,
+      u.firstName AS instructorFirstName,
+      u.lastName AS instructorLastName,
+      u.email AS instructorEmail
+    FROM qualification_records qr
+    LEFT JOIN qualification_types qt ON qt.id = qr.qualificationTypeId
+    LEFT JOIN students s ON s.id = qr.studentId
+    LEFT JOIN instructors i ON i.id = qr.instructorId
+    LEFT JOIN users u ON u.id = i.userId
+    WHERE qr.id = ${id}
+    LIMIT 1
+  `;
+
+  return rows[0] || null;
 }
 
 router.get('/lookups', async (_req, res) => {
@@ -289,28 +326,35 @@ router.get('/', async (req, res) => {
     const rows = await prisma.$queryRaw`
       SELECT
         qr.id,
-        qr.userId,
         qr.qualificationTypeId,
-        qr.qualificationNumber,
-        qr.issuedOn,
-        qr.expiresOn,
+        qr.studentId,
+        qr.instructorId,
+        qr.issueDate,
+        qr.expiryDate,
+        qr.certificateNumber,
         qr.issuingAuthority,
-        qr.status AS recordDbStatus,
-        qr.remarks,
+        qr.notes,
         qr.createdAt,
         qr.updatedAt,
         qt.code AS typeCode,
         qt.name AS typeName,
         qt.description AS typeDescription,
-        qt.validityDays AS typeValidityDays,
         qt.isActive AS typeIsActive,
-        u.firstName,
-        u.lastName,
-        u.email,
-        u.role
+        s.studentId AS studentCode,
+        s.firstName AS studentFirstName,
+        s.lastName AS studentLastName,
+        s.email AS studentEmail,
+        s.batch AS studentBatch,
+        i.employeeId,
+        i.designation,
+        u.firstName AS instructorFirstName,
+        u.lastName AS instructorLastName,
+        u.email AS instructorEmail
       FROM qualification_records qr
       LEFT JOIN qualification_types qt ON qt.id = qr.qualificationTypeId
-      LEFT JOIN users u ON u.id = qr.userId
+      LEFT JOIN students s ON s.id = qr.studentId
+      LEFT JOIN instructors i ON i.id = qr.instructorId
+      LEFT JOIN users u ON u.id = i.userId
       ORDER BY qr.createdAt DESC
     `;
 
@@ -357,37 +401,9 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const rows = await prisma.$queryRaw`
-      SELECT
-        qr.id,
-        qr.userId,
-        qr.qualificationTypeId,
-        qr.qualificationNumber,
-        qr.issuedOn,
-        qr.expiresOn,
-        qr.issuingAuthority,
-        qr.status AS recordDbStatus,
-        qr.remarks,
-        qr.createdAt,
-        qr.updatedAt,
-        qt.code AS typeCode,
-        qt.name AS typeName,
-        qt.description AS typeDescription,
-        qt.validityDays AS typeValidityDays,
-        qt.isActive AS typeIsActive,
-        u.firstName,
-        u.lastName,
-        u.email,
-        u.role
-      FROM qualification_records qr
-      LEFT JOIN qualification_types qt ON qt.id = qr.qualificationTypeId
-      LEFT JOIN users u ON u.id = qr.userId
-      WHERE qr.id = ${id}
-      LIMIT 1
-    `;
-
-    if (!rows.length) return res.status(404).json({ error: 'Record not found' });
-    res.json(mapRecord(rows[0]));
+    const row = await getRecordById(id);
+    if (!row) return res.status(404).json({ error: 'Record not found' });
+    res.json(mapRecord(row));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -401,43 +417,14 @@ router.post('/', async (req, res) => {
     const data = validation.data;
     await prisma.$executeRaw`
       INSERT INTO qualification_records
-        (userId, qualificationTypeId, qualificationNumber, issuedOn, expiresOn, issuingAuthority, status, remarks, createdAt, updatedAt)
+        (qualificationTypeId, studentId, instructorId, issueDate, expiryDate, certificateNumber, issuingAuthority, notes, createdAt, updatedAt)
       VALUES
-        (${data.userId}, ${data.qualificationTypeId}, ${data.certificateNumber}, ${data.issueDate}, ${data.expiryDate}, ${data.issuingAuthority}, ${data.dbStatus}, ${data.notes}, NOW(3), NOW(3))
+        (${data.qualificationTypeId}, ${data.studentId}, ${data.instructorId}, ${data.issueDate}, ${data.expiryDate}, ${data.certificateNumber}, ${data.issuingAuthority}, ${data.notes}, NOW(3), NOW(3))
     `;
 
     const created = await prisma.$queryRaw`SELECT MAX(id) AS id FROM qualification_records`;
-    const createdId = created[0]?.id;
-    const rows = await prisma.$queryRaw`
-      SELECT
-        qr.id,
-        qr.userId,
-        qr.qualificationTypeId,
-        qr.qualificationNumber,
-        qr.issuedOn,
-        qr.expiresOn,
-        qr.issuingAuthority,
-        qr.status AS recordDbStatus,
-        qr.remarks,
-        qr.createdAt,
-        qr.updatedAt,
-        qt.code AS typeCode,
-        qt.name AS typeName,
-        qt.description AS typeDescription,
-        qt.validityDays AS typeValidityDays,
-        qt.isActive AS typeIsActive,
-        u.firstName,
-        u.lastName,
-        u.email,
-        u.role
-      FROM qualification_records qr
-      LEFT JOIN qualification_types qt ON qt.id = qr.qualificationTypeId
-      LEFT JOIN users u ON u.id = qr.userId
-      WHERE qr.id = ${createdId}
-      LIMIT 1
-    `;
-
-    res.status(201).json(mapRecord(rows[0]));
+    const row = await getRecordById(created[0]?.id);
+    res.status(201).json(mapRecord(row));
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -455,34 +442,15 @@ router.put('/:id', async (req, res) => {
     if (!existingRows.length) return res.status(404).json({ error: 'Record not found' });
 
     const existing = existingRows[0];
-    const currentUserRows = await prisma.$queryRaw`
-      SELECT role
-      FROM users
-      WHERE id = ${existing.userId}
-      LIMIT 1
-    `;
-    const currentRole = currentUserRows[0]?.role;
-
     const mergedPayload = {
       qualificationTypeId: req.body.qualificationTypeId ?? existing.qualificationTypeId,
-      studentId:
-        req.body.studentId !== undefined
-          ? req.body.studentId
-          : currentRole === 'STUDENT'
-            ? existing.userId
-            : null,
-      instructorId:
-        req.body.instructorId !== undefined
-          ? req.body.instructorId
-          : currentRole === 'INSTRUCTOR'
-            ? existing.userId
-            : null,
-      issueDate: req.body.issueDate ?? existing.issuedOn,
-      expiryDate: req.body.expiryDate !== undefined ? req.body.expiryDate : existing.expiresOn,
-      certificateNumber: req.body.certificateNumber !== undefined ? req.body.certificateNumber : existing.qualificationNumber,
+      studentId: req.body.studentId !== undefined ? req.body.studentId : existing.studentId,
+      instructorId: req.body.instructorId !== undefined ? req.body.instructorId : existing.instructorId,
+      issueDate: req.body.issueDate ?? existing.issueDate,
+      expiryDate: req.body.expiryDate !== undefined ? req.body.expiryDate : existing.expiryDate,
+      certificateNumber: req.body.certificateNumber !== undefined ? req.body.certificateNumber : existing.certificateNumber,
       issuingAuthority: req.body.issuingAuthority !== undefined ? req.body.issuingAuthority : existing.issuingAuthority,
-      notes: req.body.notes !== undefined ? req.body.notes : existing.remarks,
-      autoRecalculateExpiry: req.body.autoRecalculateExpiry,
+      notes: req.body.notes !== undefined ? req.body.notes : existing.notes,
     };
 
     const validation = await validatePayload(mergedPayload, id);
@@ -492,48 +460,20 @@ router.put('/:id', async (req, res) => {
     await prisma.$executeRaw`
       UPDATE qualification_records
       SET
-        userId = ${data.userId},
         qualificationTypeId = ${data.qualificationTypeId},
-        qualificationNumber = ${data.certificateNumber},
-        issuedOn = ${data.issueDate},
-        expiresOn = ${data.expiryDate},
+        studentId = ${data.studentId},
+        instructorId = ${data.instructorId},
+        issueDate = ${data.issueDate},
+        expiryDate = ${data.expiryDate},
+        certificateNumber = ${data.certificateNumber},
         issuingAuthority = ${data.issuingAuthority},
-        status = ${data.dbStatus},
-        remarks = ${data.notes},
+        notes = ${data.notes},
         updatedAt = NOW(3)
       WHERE id = ${id}
     `;
 
-    const rows = await prisma.$queryRaw`
-      SELECT
-        qr.id,
-        qr.userId,
-        qr.qualificationTypeId,
-        qr.qualificationNumber,
-        qr.issuedOn,
-        qr.expiresOn,
-        qr.issuingAuthority,
-        qr.status AS recordDbStatus,
-        qr.remarks,
-        qr.createdAt,
-        qr.updatedAt,
-        qt.code AS typeCode,
-        qt.name AS typeName,
-        qt.description AS typeDescription,
-        qt.validityDays AS typeValidityDays,
-        qt.isActive AS typeIsActive,
-        u.firstName,
-        u.lastName,
-        u.email,
-        u.role
-      FROM qualification_records qr
-      LEFT JOIN qualification_types qt ON qt.id = qr.qualificationTypeId
-      LEFT JOIN users u ON u.id = qr.userId
-      WHERE qr.id = ${id}
-      LIMIT 1
-    `;
-
-    res.json(mapRecord(rows[0]));
+    const row = await getRecordById(id);
+    res.json(mapRecord(row));
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
