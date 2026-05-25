@@ -663,7 +663,7 @@ export default function FlyingSlotsRoot() {
                         </div>
                     </div>
                 </div>
-            ) }}
+            )}
             
             {/* Weather Detail Section */}
             {schedules.length > 0 && viewMode === 'list' && (

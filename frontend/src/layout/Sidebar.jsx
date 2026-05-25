@@ -81,7 +81,8 @@ const navGroups = [
 
 export const Sidebar = () => {
     const { sidebarOpen, user } = useAppStore();
-    const userRole = user?.role || 'Admin';
+    let rawRole = user?.role || 'Admin';
+    const userRole = rawRole.charAt(0).toUpperCase() + rawRole.slice(1).toLowerCase();
 
     // Filter groups and items based on role
     const filteredNavGroups = navGroups.map(group => {
