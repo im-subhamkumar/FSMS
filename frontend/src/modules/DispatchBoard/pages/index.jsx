@@ -17,7 +17,6 @@ export default function DispatchBoardRoot() {
     const [isLoading, setIsLoading] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     const [interventionMode, setInterventionMode] = useState(null);
-    const [isProcessing, setIsProcessing] = useState(false);
     const [weather, setWeather] = useState(null);
     const [isWeatherLoading, setIsWeatherLoading] = useState(false);
 
@@ -105,7 +104,6 @@ export default function DispatchBoardRoot() {
 
     const handleAbortMission = async (slotId, reason) => {
         try {
-            setIsProcessing(true);
             // Get the current slot to preserve other fields for PUT request
             const slot = slots.find(s => s.id === slotId);
             if (!slot) return;
@@ -125,8 +123,6 @@ export default function DispatchBoardRoot() {
             }
         } catch (error) {
             console.error('Error aborting mission:', error);
-        } finally {
-            setIsProcessing(false);
         }
     };
 

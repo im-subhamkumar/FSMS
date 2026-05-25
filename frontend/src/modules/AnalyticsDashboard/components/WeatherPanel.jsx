@@ -22,7 +22,6 @@ export default function WeatherPanel({ data, loading }) {
   }
 
   const verdictDist = data?.verdictDistribution || {};
-  const verdictData = Object.entries(verdictDist).map(([name, value]) => ({ name, value }));
   const catDist = data?.categoryDistribution || {};
   const catData = Object.entries(catDist).map(([name, value]) => ({ name, value }));
   const goRate = data?.dailyGoRate || [];

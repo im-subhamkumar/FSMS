@@ -23,7 +23,7 @@ export default function DocumentDetailsModal({ isOpen, onClose, document, onUplo
     const getStatusStyle = (doc) => {
         if (doc.status === 'EXPIRED') return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800/50';
         const warningDays = doc.category?.warningThresholdDays || 30;
-        if (doc.expiryDate && new Date(doc.expiryDate) < new Date(Date.now() + warningDays * 24 * 60 * 60 * 1000)) {
+        if (doc.expiryDate && new Date(doc.expiryDate) < new Date(new Date().getTime() + warningDays * 24 * 60 * 60 * 1000)) {
             return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50';
         }
         return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50';
@@ -32,7 +32,7 @@ export default function DocumentDetailsModal({ isOpen, onClose, document, onUplo
     const getStatusText = (doc) => {
         if (doc.status === 'EXPIRED') return 'Expired';
         const warningDays = doc.category?.warningThresholdDays || 30;
-        if (doc.expiryDate && new Date(doc.expiryDate) < new Date(Date.now() + warningDays * 24 * 60 * 60 * 1000)) {
+        if (doc.expiryDate && new Date(doc.expiryDate) < new Date(new Date().getTime() + warningDays * 24 * 60 * 60 * 1000)) {
             return 'Expiring Soon';
         }
         return 'Valid';
@@ -41,7 +41,7 @@ export default function DocumentDetailsModal({ isOpen, onClose, document, onUplo
     const StatusIcon = ({ doc, className }) => {
         if (doc.status === 'EXPIRED') return <AlertCircle className={className} />;
         const warningDays = doc.category?.warningThresholdDays || 30;
-        if (doc.expiryDate && new Date(doc.expiryDate) < new Date(Date.now() + warningDays * 24 * 60 * 60 * 1000)) {
+        if (doc.expiryDate && new Date(doc.expiryDate) < new Date(new Date().getTime() + warningDays * 24 * 60 * 60 * 1000)) {
             return <Clock className={className} />;
         }
         return <ShieldCheck className={className} />;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Users, Clock, Target } from 'lucide-react';
 
