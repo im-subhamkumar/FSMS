@@ -1,15 +1,75 @@
-import React from 'react';
-import { Users, Calendar, Clock, CheckCircle, ClipboardCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Calendar, Clock, CheckCircle, ClipboardCheck, User as UserIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
+import api from '../services/api';
 
 export const InstructorDashboard = () => {
     const { user } = useAppStore();
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    const [assignedStudents, setAssignedStudents] = useState(0);
+    const [sessionsToday, setSessionsToday] = useState(0);
+    const [totalFlightHours, setTotalFlightHours] = useState(0);
+    const [completedSessions, setCompletedSessions] = useState(0);
+    const [todaySchedules, setTodaySchedules] = useState([]);
+
+    useEffect(() => {
+        const fetchInstructorData = async () => {
+            const instructorId = user?.instructorDbId || user?.id;
+            if (!instructorId) return;
+
+            try {
+                // Fetch schedules for this instructor
+                const schedulesRes = await api.get(`/schedules?instructorId=${instructorId}`);
+                const schedules = schedulesRes.data || [];
+
+                // 1. Calculate assigned students count (unique traineeIds)
+                const uniqueTrainees = new Set(schedules.map(s => s.traineeId));
+                setAssignedStudents(uniqueTrainees.size);
+
+                // 2. Filter completed slots and calculate total flight hours
+                const completedSlots = schedules.filter(s => s.status?.toUpperCase() === 'COMPLETED');
+                setCompletedSessions(completedSlots.length);
+
+                let totalHours = 0;
+                completedSlots.forEach(s => {
+                    const start = new Date(s.startTime);
+                    const end = new Date(s.endTime);
+                    const hours = (end - start) / (1000 * 60 * 60);
+                    if (!isNaN(hours)) {
+                        totalHours += hours;
+                    }
+                });
+                setTotalFlightHours(totalHours);
+
+                // 3. Filter sessions scheduled for today
+                const todayStr = new Date().toISOString().split('T')[0];
+                const todaySlots = schedules.filter(s => {
+                    const sDateStr = new Date(s.startTime).toISOString().split('T')[0];
+                    return sDateStr === todayStr;
+                });
+                setSessionsToday(todaySlots.length);
+
+                // Sort today's slots by startTime
+                const sortedTodaySlots = todaySlots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+                setTodaySchedules(sortedTodaySlots);
+
+            } catch (err) {
+                console.error("Failed to fetch instructor dashboard details:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchInstructorData();
+    }, [user?.instructorDbId, user?.id]);
 
     const stats = [
-        { id: 1, name: 'Assigned Students', value: '12', icon: Users, color: 'blue' },
-        { id: 2, name: 'Sessions Today', value: '4', icon: Calendar, color: 'green' },
-        { id: 3, name: 'Total Flight Hours', value: '150.5', icon: Clock, color: 'purple' },
-        { id: 4, name: 'Completed Sessions', value: '84', icon: CheckCircle, color: 'emerald' },
+        { id: 1, name: 'Assigned Students', value: loading ? '...' : assignedStudents.toString(), icon: Users, color: 'blue' },
+        { id: 2, name: 'Sessions Today', value: loading ? '...' : sessionsToday.toString(), icon: Calendar, color: 'green' },
+        { id: 3, name: 'Total Flight Hours', value: loading ? '...' : totalFlightHours.toFixed(1), icon: Clock, color: 'purple' },
+        { id: 4, name: 'Completed Sessions', value: loading ? '...' : completedSessions.toString(), icon: CheckCircle, color: 'emerald' },
     ];
 
     const getColorClass = (color) => {
@@ -31,6 +91,13 @@ export const InstructorDashboard = () => {
                         Manage your students, sessions, and daily operations.
                     </p>
                 </div>
+                <button 
+                    onClick={() => navigate(`/instructors/${user?.instructorDbId || user?.id}`)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-[0.98]"
+                >
+                    <UserIcon className="h-4 w-4" />
+                    View My Profile
+                </button>
             </div>
 
             {/* Stat Cards Grid */}
@@ -62,27 +129,52 @@ export const InstructorDashboard = () => {
                 <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 min-h-[400px]">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Today's Schedule</h2>
                     <div className="space-y-4 mt-8">
-                        {/* Placeholder for schedule list */}
-                        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
-                            <div>
-                                <p className="font-semibold text-gray-800 dark:text-gray-200">08:00 AM - 10:00 AM</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Dual Flight - C172 (VT-XYZ)</p>
+                        {loading ? (
+                            <div className="animate-pulse space-y-4">
+                                <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-xl"></div>
+                                <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-xl"></div>
                             </div>
-                            <div className="text-right flex items-center gap-4">
-                                <p className="font-semibold text-gray-700 dark:text-gray-300">John Doe (S-101)</p>
-                                <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium dark:bg-blue-900 dark:text-blue-300">Scheduled</span>
+                        ) : todaySchedules.length > 0 ? (
+                            todaySchedules.map((schedule) => {
+                                const start = new Date(schedule.startTime);
+                                const end = new Date(schedule.endTime);
+                                const timeRange = `${start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+                                
+                                const getStatusStyles = (status) => {
+                                    switch (status?.toUpperCase()) {
+                                        case 'SCHEDULED': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800';
+                                        case 'CANCELLED': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800';
+                                        case 'COMPLETED': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800';
+                                        default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
+                                    }
+                                };
+
+                                return (
+                                    <div key={schedule.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600 hover:shadow-sm transition-shadow">
+                                        <div>
+                                            <p className="font-semibold text-gray-800 dark:text-gray-200">{timeRange}</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                                {schedule.flightType} Flight - {schedule.aircraftId}
+                                            </p>
+                                        </div>
+                                        <div className="text-right flex items-center gap-4">
+                                            <p className="font-semibold text-gray-700 dark:text-gray-300">
+                                                {schedule.traineeName || 'Trainee'}
+                                            </p>
+                                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusStyles(schedule.status)}`}>
+                                                {schedule.status === 'SCHEDULED' ? 'Scheduled' : schedule.status === 'COMPLETED' ? 'Completed' : schedule.status === 'CANCELLED' ? 'Cancelled' : schedule.status}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="text-center py-12 bg-gray-50 dark:bg-gray-700/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                                <Calendar className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-3" />
+                                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">No sessions scheduled for today</p>
+                                <p className="text-xs text-gray-500 mt-1">Enjoy your day or check flying slots to review past/future sessions!</p>
                             </div>
-                        </div>
-                        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
-                            <div>
-                                <p className="font-semibold text-gray-800 dark:text-gray-200">11:00 AM - 12:30 PM</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Pre-flight Briefing</p>
-                            </div>
-                            <div className="text-right flex items-center gap-4">
-                                <p className="font-semibold text-gray-700 dark:text-gray-300">Alice Smith (S-102)</p>
-                                <span className="inline-block px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-medium dark:bg-emerald-900 dark:text-emerald-300">Completed</span>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 

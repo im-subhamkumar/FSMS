@@ -4,6 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
+import { fileURLToPath } from 'url';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -11,7 +12,9 @@ const prisma = new PrismaClient();
 // ──────────────────────────────────────────
 // File Upload Setup (multer)
 // ──────────────────────────────────────────
-const UPLOAD_DIR = path.resolve('uploads/students');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'students');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({

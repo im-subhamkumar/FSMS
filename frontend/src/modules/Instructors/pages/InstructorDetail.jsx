@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAppStore } from '../../../store/useAppStore';
 import {
   ArrowLeft, Edit2, Trash2, User, Briefcase, Award, Heart,
   PlaneTakeoff, BookOpen, Calendar, FileText, Clock, AlertTriangle,
@@ -131,6 +132,7 @@ function formatDate(d) {
 export function InstructorDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: currentUser } = useAppStore();
   const [instructor, setInstructor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -226,8 +228,8 @@ export function InstructorDetail() {
       />
       {/* Top Bar */}
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/instructors')} className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
-          <ArrowLeft className="h-4 w-4" /> Instructors
+        <button onClick={() => navigate(currentUser?.role === 'Instructor' ? '/' : '/instructors')} className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
+          <ArrowLeft className="h-4 w-4" /> {currentUser?.role === 'Instructor' ? 'Dashboard' : 'Instructors'}
         </button>
         <span className="text-gray-300 dark:text-gray-600">/</span>
         <span className="text-sm font-semibold text-gray-900 dark:text-white">{fullName}</span>
@@ -251,20 +253,22 @@ export function InstructorDetail() {
                 <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800 shadow-sm" />
               )}
             </div>
-            <div className="flex items-center gap-2 mb-1">
-              <button
-                onClick={() => navigate(`/instructors/${id}/edit`)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
-              >
-                <Edit2 className="h-3.5 w-3.5" /> Edit Profile
-              </button>
-              <button
-                onClick={handleDeactivate}
-                className="flex items-center gap-2 px-4 py-2 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-semibold rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Deactivate
-              </button>
-            </div>
+            {currentUser?.role !== 'Instructor' && (
+              <div className="flex items-center gap-2 mb-1">
+                <button
+                  onClick={() => navigate(`/instructors/${id}/edit`)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
+                >
+                  <Edit2 className="h-3.5 w-3.5" /> Edit Profile
+                </button>
+                <button
+                  onClick={handleDeactivate}
+                  className="flex items-center gap-2 px-4 py-2 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-semibold rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Deactivate
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
