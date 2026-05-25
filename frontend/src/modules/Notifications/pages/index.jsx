@@ -1,6 +1,5 @@
 import NotificationBell from "../components/NotificationBell";
 import NotificationList from "../components/NotificationList";
-import EventSimulator from "../components/EventSimulator";
 
 const NotificationsPage = () => {
   return (
@@ -12,8 +11,6 @@ const NotificationsPage = () => {
 
         <NotificationBell />
       </div>
-
-      <EventSimulator />
 
       <NotificationList />
     </div>

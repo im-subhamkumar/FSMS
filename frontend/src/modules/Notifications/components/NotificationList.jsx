@@ -7,7 +7,7 @@ const NotificationList = ({
   if (!notifications || notifications.length === 0) {
     return (
       <div className="p-6 text-center text-gray-500">
-        No notifications available
+        Click on the Bell icon to check notifications
       </div>
     );
   }

@@ -1,14 +1,14 @@
 import { useState } from "react";
 
 import AuditRow from "./AuditRow";
+import { useAuditLogs } from "../hooks/useAuditLogs";
 
 const AuditTable = () => {
   const [search, setSearch] = useState("");
 
-  const auditLogs =
-    JSON.parse(localStorage.getItem("auditLogs")) || [];
+  const { logs } = useAuditLogs();
 
-  const filteredLogs = auditLogs.filter((log) =>
+  const filteredLogs = logs.filter((log) =>
     log.module
       .toLowerCase()
       .includes(search.toLowerCase())
