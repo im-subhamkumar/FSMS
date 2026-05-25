@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Menu, Bell, Search, User, Sun, Moon, LogOut, Settings as SettingsIcon, X } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 export const Header = () => {
     const { toggleSidebar, user, logout, notifications, removeNotification, markAllRead, theme, toggleTheme } = useAppStore();
+    const navigate = useNavigate();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     
@@ -144,7 +146,19 @@ export const Header = () => {
                                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">{user?.role || 'User'}</p>
                             </div>
                             <div className="p-1.5 border-b dark:border-gray-700">
-                                <button className="flex w-full items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors group">
+                                <button 
+                                    onClick={() => {
+                                        setIsProfileOpen(false);
+                                        if (user?.role === 'Student') {
+                                            navigate(`/students/${user.id}`);
+                                        } else if (user?.role === 'Instructor') {
+                                            navigate(`/instructors/${user.instructorDbId || user.id}`);
+                                        } else {
+                                            navigate('/');
+                                        }
+                                    }}
+                                    className="flex w-full items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors group"
+                                >
                                     <User className="mr-3 h-4 w-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
                                     Your Profile
                                 </button>

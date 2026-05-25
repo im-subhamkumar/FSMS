@@ -113,7 +113,7 @@ export default function FlyingSlotsRoot() {
                         instructorId: s.instructorId,
                         aircraft: s.aircraftId,
                         flightType: s.flightType || 'Dual',
-                        status: s.status === 'SCHEDULED' ? 'Scheduled' : s.status === 'CANCELLED' ? 'Cancelled' : s.status,
+                        status: s.status === 'SCHEDULED' ? 'Scheduled' : s.status === 'CANCELLED' ? 'Cancelled' : s.status === 'COMPLETED' ? 'Completed' : s.status,
                         weatherVerdict: s.weatherVerdict,
                         extremeWeatherWarning: s.extremeWeatherWarning,
                         cancellationReason: s.cancellationReason
@@ -600,7 +600,10 @@ export default function FlyingSlotsRoot() {
                             {isInstructor && (
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Action</label>
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <button type="button" onClick={() => setFormData(prev => ({...prev, status: 'Completed'}))} className={`py-2.5 px-4 rounded-lg border-2 font-bold text-sm transition-all ${ formData.status === 'Completed' ? 'border-green-500 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-green-300'}`}>
+                                            ✓ Completed
+                                        </button>
                                         <button type="button" onClick={() => setFormData(prev => ({...prev, status: 'Cancelled'}))} className={`py-2.5 px-4 rounded-lg border-2 font-bold text-sm transition-all ${ formData.status === 'Cancelled' ? 'border-red-500 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-red-300'}`}>
                                             ✕ Cancel Slot
                                         </button>
@@ -636,7 +639,7 @@ export default function FlyingSlotsRoot() {
                                     </div>
                                 </div>
                                 {slot.extremeWeatherWarning && <div className="text-xs mt-2 text-red-500 font-medium italic">⚠️ {slot.extremeWeatherWarning}</div>}
-                                {!isStudent && <button onClick={() => handleDeleteSchedule(slot.id)} className="mt-3 text-[10px] text-gray-400 hover:text-red-500 uppercase tracking-widest font-bold transition-colors">Delete Record</button>}
+                                {!isStudent && !isInstructor && <button onClick={() => handleDeleteSchedule(slot.id)} className="mt-3 text-[10px] text-gray-400 hover:text-red-500 uppercase tracking-widest font-bold transition-colors">Delete Record</button>}
                             </div>
                         ))}
                     </div>

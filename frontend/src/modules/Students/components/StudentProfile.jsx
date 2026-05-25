@@ -1,18 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAppStore } from "../../../store/useAppStore";
 import {
   ChevronLeft, Edit2, User, ShieldCheck, HeartPulse,
   Lock, FileText, MapPin, Phone, Mail, Calendar,
   Globe, CreditCard, BookOpen, ExternalLink, Badge
 } from "lucide-react";
+import { StudentDocumentSection } from "./StudentDocumentSection";
 
 const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 export default function StudentProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: currentUser } = useAppStore();
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [docsLoading, setDocsLoading] = useState(false);
 
   const fetchStudent = useCallback(async () => {
     try {
@@ -25,6 +29,51 @@ export default function StudentProfile() {
       setLoading(false);
     }
   }, [id]);
+
+  const handleUploadDoc = async (file, category, label) => {
+    setDocsLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const combinedType = category ? `${category}${label ? ` - ${label}` : ''}` : (label || 'Other');
+      fd.append('documentType', combinedType);
+
+      const res = await fetch(`${API_BASE}/students/${id}/documents`, {
+        method: 'POST',
+        body: fd
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      const doc = await res.json();
+      setStudent(prev => ({
+        ...prev,
+        documents: [doc, ...(prev.documents || [])]
+      }));
+    } catch (e) {
+      console.error("Failed to upload document", e);
+      alert("Failed to upload document: " + e.message);
+    } finally {
+      setDocsLoading(false);
+    }
+  };
+
+  const handleDeleteDoc = async (docId) => {
+    setDocsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/students/${id}/documents/${docId}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      setStudent(prev => ({
+        ...prev,
+        documents: (prev.documents || []).filter(d => d.id !== docId)
+      }));
+    } catch (e) {
+      console.error("Failed to delete document", e);
+      alert("Failed to delete document: " + e.message);
+    } finally {
+      setDocsLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchStudent();
@@ -85,10 +134,10 @@ export default function StudentProfile() {
       {/* BACK + HEADER */}
       <div className="mb-8">
         <button
-          onClick={() => navigate("/students")}
+          onClick={() => navigate(currentUser?.role === 'Student' ? '/' : "/students")}
           className="flex items-center gap-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 mb-4 transition-colors"
         >
-          <ChevronLeft size={16} /> Back to Directory
+          <ChevronLeft size={16} /> {currentUser?.role === 'Student' ? 'Back to Dashboard' : 'Back to Directory'}
         </button>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -114,12 +163,14 @@ export default function StudentProfile() {
             </div>
           </div>
 
-          <button
-            onClick={() => navigate(`/students/edit/${student.id}`)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md shadow-indigo-500/20 transition-all hover:-translate-y-0.5"
-          >
-            <Edit2 size={16} /> Edit Profile
-          </button>
+          {currentUser?.role !== 'Student' && (
+            <button
+              onClick={() => navigate(`/students/edit/${student.id}`)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md shadow-indigo-500/20 transition-all hover:-translate-y-0.5"
+            >
+              <Edit2 size={16} /> Edit Profile
+            </button>
+          )}
         </div>
       </div>
 
@@ -185,36 +236,23 @@ export default function StudentProfile() {
             <EmptySection text="No school account created" />
           )}
         </SectionCard>
+      </div>
 
-        {/* DOCUMENTS */}
-        <SectionCard icon={<FileText size={20} className="text-purple-500" />} title={`Documents (${documents.length})`}>
-          {documents.length > 0 ? (
-            <div className="space-y-3">
-              {documents.map((doc, i) => (
-                <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/60">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{doc.documentType || "Unnamed Document"}</p>
-                    <p className="text-xs text-slate-400 mt-0.5 truncate max-w-[220px]">{doc.fileUrl || "No URL"}</p>
-                  </div>
-                  {doc.fileUrl && (
-                    <a
-                      href={doc.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors flex-shrink-0"
-                      title="Open Document"
-                    >
-                      <ExternalLink size={16} />
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptySection text="No documents attached" />
-          )}
-        </SectionCard>
-
+      {/* DOCUMENTS MANAGER */}
+      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-700 overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+          <FileText size={20} className="text-purple-500" />
+          <h3 className="font-bold text-slate-800 dark:text-white text-sm">Supporting Documents Manager</h3>
+        </div>
+        <div className="p-6">
+          <StudentDocumentSection
+            documents={documents}
+            onUpload={handleUploadDoc}
+            onDelete={handleDeleteDoc}
+            isLoading={docsLoading}
+            readOnly={currentUser?.role === 'Student'}
+          />
+        </div>
       </div>
     </div>
   );
