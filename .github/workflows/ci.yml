@@ -36,7 +36,7 @@ jobs:
     - name: Install Frontend Dependencies & Build
       working-directory: ./frontend
       run: |
-        npm ci
+        npm ci --legacy-peer-deps
         npm run build
 
     # 5. (Optional) Verify Docker Compose Builds Successfully
