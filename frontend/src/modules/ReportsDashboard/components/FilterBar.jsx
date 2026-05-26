@@ -1,3 +1,7 @@
+// FilterBar.jsx -- Date range picker with refresh and export controls.
+// Provides "from" and "to" date inputs that update the useReportData hook's
+// dateRange state, triggering a re-fetch of all dashboard endpoints.
+// Includes ExportButtons for CSV and PDF download.
 import React, { useState } from 'react';
 import ExportButtons from './ExportButtons';
 import { Calendar, RefreshCw } from 'lucide-react';

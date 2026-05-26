@@ -1,5 +1,19 @@
-// T3 — InvoiceStats (T10 required: Total Revenue, Outstanding, Overdue)
-// Enhanced with interactive cards (pattern from Student module StatCard/BatchCard)
+// ---------------------------------------------------------------------------
+// InvoiceStats.jsx -- Financial KPI summary cards
+//
+// Displays six stat cards: Total Revenue, Outstanding, Overdue amount,
+// Invoices Paid count, Pending count, Overdue count. The three count
+// cards support click-to-filter behaviour (clicking sets a status filter
+// on the parent InvoiceList).
+//
+// Role-based visibility: Students see a reduced set (4 cards). The
+// STUDENT_HIDDEN_KEYS array defines which cards are hidden for students.
+// This prevents students from viewing aggregate financial metrics like
+// Total Revenue or Invoices Paid across the entire school.
+//
+// Props: stats, loading, activeFilter, onFilterByStatus, isStudent
+// ---------------------------------------------------------------------------
+
 import React from 'react';
 import { IndianRupee, Clock, AlertTriangle, FileText, CheckCircle2 } from 'lucide-react';
 
@@ -15,10 +29,16 @@ const CARDS = [
   { key: 'overdueCount', label: 'Overdue',         icon: AlertTriangle, color: 'text-red-600 dark:text-red-400',      bg: 'bg-red-50 dark:bg-red-900/20',      hoverBorder: 'hover:border-red-300 dark:hover:border-red-600',     hoverShadow: 'hover:shadow-red-500/10', isCount: true, filterStatus: 'OVERDUE', isAlert: true },
 ];
 
-export default function InvoiceStats({ stats, loading, activeFilter, onFilterByStatus }) {
+// Cards to hide from students — they shouldn't see aggregate revenue
+const STUDENT_HIDDEN_KEYS = ['totalRevenue', 'paidCount'];
+
+export default function InvoiceStats({ stats, loading, activeFilter, onFilterByStatus, isStudent }) {
+  const visibleCards = isStudent
+    ? CARDS.filter(c => !STUDENT_HIDDEN_KEYS.includes(c.key))
+    : CARDS;
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
-      {CARDS.map(card => {
+    <div className={`grid gap-4 ${isStudent ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-6'}`}>
+      {visibleCards.map(card => {
         const Icon = card.icon;
         const value = stats?.[card.key];
         const isClickable = Boolean(card.filterStatus && onFilterByStatus);

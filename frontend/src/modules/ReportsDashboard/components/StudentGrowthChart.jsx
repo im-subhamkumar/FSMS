@@ -1,3 +1,6 @@
+// StudentGrowthChart.jsx -- Area chart showing monthly student enrollments.
+// Displays new student joins over time with a gradient fill area chart.
+// Data source: GET /api/reports/students -> monthlyJoins
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users } from 'lucide-react';

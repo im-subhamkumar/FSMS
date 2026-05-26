@@ -1,6 +1,17 @@
-// T3 — PrintableInvoice (T10 bonus: react-to-print template)
-// Hidden on screen, visible during print.
-// Used with react-to-print in InvoiceDetail.
+// ---------------------------------------------------------------------------
+// PrintableInvoice.jsx -- Print-optimized invoice template
+//
+// Hidden on screen, rendered only during print via react-to-print.
+// Uses inline styles (not Tailwind) because browser print engines
+// strip external CSS classes. Includes school header, billing details,
+// line items table, payment history, totals summary, and notes.
+//
+// Uses forwardRef so the parent InvoiceDetail can pass a ref to
+// react-to-print's useReactToPrint() hook.
+//
+// Currency formatting: en-IN locale with 2 decimal places.
+// Date formatting: en-IN locale with day/month/year.
+// ---------------------------------------------------------------------------
 
 import React from 'react';
 

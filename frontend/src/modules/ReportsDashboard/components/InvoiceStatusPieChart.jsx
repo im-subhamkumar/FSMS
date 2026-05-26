@@ -1,3 +1,7 @@
+// InvoiceStatusPieChart.jsx -- Donut chart showing invoice count by status.
+// Displays PAID, PENDING, and OVERDUE segments with hover-expand interaction.
+// Uses Recharts PieChart with an inner radius to create a donut effect.
+// Data source: GET /api/reports/financial -> statusBreakdown
 import React, { useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, Sector } from 'recharts';
 import { PieChart as PieChartIcon } from 'lucide-react';

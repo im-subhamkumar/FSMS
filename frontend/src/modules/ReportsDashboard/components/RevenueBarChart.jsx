@@ -1,6 +1,33 @@
+// ---------------------------------------------------------------------------
+// RevenueBarChart.jsx -- Monthly revenue trend (vertical bar chart)
+//
+// Displays paid invoice revenue grouped by month. Uses Indian number
+// formatting (Lakhs/Crore) on both Y-axis labels and hover tooltips.
+//
+// Data shape: [{ month: "Jan 26", amount: 3295000 }, ...]
+// Source: GET /api/reports/financial -> monthlyRevenue
+// ---------------------------------------------------------------------------
+
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Banknote } from 'lucide-react';
+
+// Formats a numeric value into Indian currency notation for tooltips.
+// Thresholds: >= 1 Crore (10M) --> Cr, >= 1 Lakh (100K) --> L, >= 1K --> K
+function formatIndianCurrency(value) {
+  if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
+  if (value >= 100000)   return `₹${(value / 100000).toFixed(value >= 1000000 ? 1 : 2)} L`;
+  if (value >= 1000)     return `₹${(value / 1000).toFixed(0)}K`;
+  return `₹${value}`;
+}
+
+// Short axis label — ₹6.25L
+function formatAxisLabel(value) {
+  if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`;
+  if (value >= 100000)   return `₹${(value / 100000).toFixed(1)}L`;
+  if (value >= 1000)     return `₹${(value / 1000).toFixed(0)}K`;
+  return `₹${value}`;
+}
 
 export default function RevenueBarChart({ data = [] }) {
   if (!data || data.length === 0) {
@@ -19,11 +46,11 @@ export default function RevenueBarChart({ data = [] }) {
     <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col min-h-[280px]">
       <div className="mb-4">
         <h3 className="text-gray-800 dark:text-gray-100 font-semibold text-sm">Revenue Trend</h3>
-        <p className="text-gray-400 dark:text-gray-500 text-xs">Monthly paid invoice totals</p>
+        <p className="text-gray-400 dark:text-gray-500 text-xs">Monthly paid invoice totals (in Lakhs)</p>
       </div>
       <div className="flex-1 min-h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+          <BarChart data={data} margin={{ top: 5, right: 5, left: -5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" strokeOpacity={0.15} />
             <XAxis
               dataKey="month"
@@ -36,11 +63,12 @@ export default function RevenueBarChart({ data = [] }) {
               axisLine={false}
               tickLine={false}
               tick={{ fill: '#64748b', fontSize: 11 }}
-              tickFormatter={(v) => v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`}
+              tickFormatter={formatAxisLabel}
+              width={55}
             />
             <Tooltip
               cursor={{ fill: 'rgba(59,130,246,0.05)' }}
-              formatter={(value) => [`₹${value.toLocaleString()}`, 'Revenue']}
+              formatter={(value) => [formatIndianCurrency(value), 'Revenue']}
               contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '12px' }}
               labelStyle={{ fontWeight: '600', color: '#1e293b', paddingBottom: '4px' }}
             />

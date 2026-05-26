@@ -16,11 +16,19 @@
 
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// ─── Apply JWT auth to ALL invoice routes ─────────────────────
+router.use(authenticateToken);
+
 // ─── Helper: Auto-generate Invoice Number ────────────────────
+// Format: INV-YYYY-NNNN where NNNN is a zero-padded sequential counter.
+// Uses total invoice count + 1 as the sequence number. This approach is
+// simple but not collision-safe under concurrent inserts. For production,
+// consider a database sequence or UUID-based scheme.
 async function generateInvoiceNumber() {
   const year = new Date().getFullYear();
   const count = await prisma.invoice.count();
@@ -29,6 +37,9 @@ async function generateInvoiceNumber() {
 }
 
 // ─── Helper: Recalculate invoice total from items ─────────────
+// Sums all line item totalPrice values and updates the parent invoice.
+// Called after adding, removing, or replacing line items to keep
+// the invoice.amount field in sync with its items.
 async function recalcAmount(invoiceId) {
   const items = await prisma.invoiceItem.findMany({ where: { invoiceId } });
   const total = items.reduce((sum, item) => sum + parseFloat(item.totalPrice), 0);
@@ -40,6 +51,11 @@ async function recalcAmount(invoiceId) {
 }
 
 // ─── Helper: Recalculate invoice paid amount and auto-status ──
+// Sums all Payment records linked to this invoice and updates paidAmount.
+// Automatic status transitions:
+//   - If paidAmount >= invoice amount and amount > 0 --> status = PAID
+//   - If currently PAID but paidAmount < amount (e.g., payment reversed) --> status = PENDING
+// This ensures the invoice status always reflects its actual payment state.
 async function recalcInvoicePayments(invoiceId) {
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
@@ -47,13 +63,15 @@ async function recalcInvoicePayments(invoiceId) {
   });
   if (!invoice) return;
 
+  // Sum all payment amounts to get the new paidAmount
   const paidAmount = invoice.payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
   
+  // Determine if status should auto-transition
   let newStatus = invoice.status;
   if (paidAmount >= parseFloat(invoice.amount) && invoice.amount > 0) {
-    newStatus = 'PAID';
+    newStatus = 'PAID';  // Fully paid -- mark as PAID
   } else if (invoice.status === 'PAID' && paidAmount < parseFloat(invoice.amount)) {
-    newStatus = 'PENDING';
+    newStatus = 'PENDING';  // Was PAID but balance no longer covered -- revert to PENDING
   }
 
   await prisma.invoice.update({
@@ -65,9 +83,16 @@ async function recalcInvoicePayments(invoiceId) {
 
 // ─── GET /api/invoices/stats ──────────────────────────────────
 // KPI summary — must be registered BEFORE /:id
+// Students see only their own stats; Admin/Staff see all
 router.get('/stats', async (req, res) => {
   try {
+    const where = {};
+    if (req.user.role === 'STUDENT') {
+      where.studentId = parseInt(req.user.id);
+    }
+
     const invoices = await prisma.invoice.findMany({
+      where,
       select: { amount: true, paidAmount: true, status: true },
     });
 
@@ -97,14 +122,20 @@ router.get('/stats', async (req, res) => {
 
 // ─── GET /api/invoices ───────────────────────────────────────
 // T10 required: List all invoices
-// Optional filters: ?status=PAID&userId=3&from=2026-01-01&to=2026-12-31
+// Students auto-filtered to their own invoices only
 router.get('/', async (req, res) => {
   try {
     const { status, studentId, from, to } = req.query;
     const where = {};
 
+    // RBAC: Students can only see their own invoices
+    if (req.user.role === 'STUDENT') {
+      where.studentId = parseInt(req.user.id);
+    } else if (studentId) {
+      where.studentId = parseInt(studentId);
+    }
+
     if (status) where.status = status;
-    if (studentId) where.studentId = parseInt(studentId);
     if (from || to) {
       where.issuedDate = {};
       if (from) where.issuedDate.gte = new Date(from);
@@ -129,6 +160,7 @@ router.get('/', async (req, res) => {
 
 // ─── GET /api/invoices/:id ───────────────────────────────────
 // Get single invoice with line items and payments
+// Students can only view their own invoices
 router.get('/:id', async (req, res) => {
   try {
     const invoice = await prisma.invoice.findUnique({
@@ -142,6 +174,12 @@ router.get('/:id', async (req, res) => {
     });
 
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+
+    // RBAC: Students can only view their own invoices
+    if (req.user.role === 'STUDENT' && invoice.studentId !== parseInt(req.user.id)) {
+      return res.status(403).json({ error: 'Access denied: This invoice does not belong to you.' });
+    }
+
     res.json(invoice);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -149,8 +187,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // ─── POST /api/invoices ──────────────────────────────────────
-
-router.post('/', async (req, res) => {
+// Admin/Staff only — students cannot create invoices
+router.post('/', authorizeRoles('ADMIN', 'STAFF'), async (req, res) => {
   try {
     const { studentId, issuedById, dueDate, notes, amount, items } = req.body;
 
@@ -208,7 +246,8 @@ router.post('/', async (req, res) => {
 });
 
 // ─── POST /api/invoices/:id/payments ────────────────────────
-router.post('/:id/payments', async (req, res) => {
+// Admin/Staff only
+router.post('/:id/payments', authorizeRoles('ADMIN', 'STAFF'), async (req, res) => {
   try {
     const invoiceId = parseInt(req.params.id);
     const { amount, method, notes } = req.body;
@@ -247,8 +286,8 @@ router.post('/:id/payments', async (req, res) => {
 });
 
 // ─── PATCH /api/invoices/:id/status ─────────────────────────
-// T10 required: Update payment status
-router.patch('/:id/status', async (req, res) => {
+// T10 required: Update payment status — Admin/Staff only
+router.patch('/:id/status', authorizeRoles('ADMIN', 'STAFF'), async (req, res) => {
   try {
     const { status } = req.body;
     const id = parseInt(req.params.id);
@@ -298,8 +337,8 @@ router.patch('/:id/status', async (req, res) => {
 });
 
 // ─── PUT /api/invoices/:id ───────────────────────────────────
-// Update invoice metadata (notes, dueDate, paidAmount)
-router.put('/:id', async (req, res) => {
+// Update invoice metadata — Admin/Staff only
+router.put('/:id', authorizeRoles('ADMIN', 'STAFF'), async (req, res) => {
   try {
     const { notes, dueDate, paidAmount, items } = req.body;
     const id = parseInt(req.params.id);
@@ -379,8 +418,8 @@ router.put('/:id', async (req, res) => {
 });
 
 // ─── DELETE /api/invoices/:id ────────────────────────────────
-// Delete invoice — only allowed when status is PENDING
-router.delete('/:id', async (req, res) => {
+// Delete invoice — Admin/Staff only, PENDING status required
+router.delete('/:id', authorizeRoles('ADMIN', 'STAFF'), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const existing = await prisma.invoice.findUnique({ where: { id } });
@@ -401,8 +440,8 @@ router.delete('/:id', async (req, res) => {
 });
 
 // ─── POST /api/invoices/:id/items ───────────────────────────
-// Add a line item
-router.post('/:id/items', async (req, res) => {
+// Add a line item — Admin/Staff only
+router.post('/:id/items', authorizeRoles('ADMIN', 'STAFF'), async (req, res) => {
   try {
     const invoiceId = parseInt(req.params.id);
     const { description, quantity, unitPrice } = req.body;
@@ -426,8 +465,8 @@ router.post('/:id/items', async (req, res) => {
 });
 
 // ─── DELETE /api/invoices/:id/items/:itemId ─────────────────
-// Remove a line item
-router.delete('/:id/items/:itemId', async (req, res) => {
+// Remove a line item — Admin/Staff only
+router.delete('/:id/items/:itemId', authorizeRoles('ADMIN', 'STAFF'), async (req, res) => {
   try {
     const invoiceId = parseInt(req.params.id);
     const itemId    = parseInt(req.params.itemId);

@@ -1,10 +1,31 @@
+// ---------------------------------------------------------------------------
+// reportRoutes.js -- Reports Dashboard API
+// Prefix: /api/reports
+//
+// Seven read-only GET endpoints that aggregate data from across the FSMS
+// database for the admin Reports Dashboard. Each endpoint is self-contained
+// and returns a JSON object tailored for its corresponding frontend chart.
+//
+// Endpoints:
+//   GET /financial   -- Revenue, billing, monthly trends, status breakdown
+//   GET /students    -- Enrollment counts and monthly join trends
+//   GET /flights     -- Slot activity, completion rates, flying hours
+//   GET /instructors -- Instructor workload (slots and hours per instructor)
+//   GET /courses     -- Course distribution and student counts per course
+//   GET /fleet       -- Aircraft status, utilization, and squawk counts
+//   GET /compliance  -- Expiring/expired licenses, medicals, and documents
+// ---------------------------------------------------------------------------
+
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// ─── Helper: Parse Date Filters ───────────────────────────────
+// Builds a Prisma where-clause for date range filtering.
+// Converts query.from/query.to into a { gte, lte } filter on the specified
+// date field. The 'to' date is extended to end-of-day (23:59:59.999) to
+// include all records created on that date.
 const getDateFilters = (query, dateField = 'createdAt') => {
   const filters = {};
   if (query.from || query.to) {
@@ -12,18 +33,20 @@ const getDateFilters = (query, dateField = 'createdAt') => {
     if (query.from) filters[dateField].gte = new Date(query.from);
     if (query.to) {
       const toDate = new Date(query.to);
-      toDate.setHours(23, 59, 59, 999);
+      toDate.setHours(23, 59, 59, 999);  // Include the entire 'to' day
       filters[dateField].lte = toDate;
     }
   }
   return filters;
 };
 
+// Converts a Date object to a "YYYY-MM" key for monthly grouping.
 const getYearMonthKey = (date) => {
   const d = new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 };
 
+// Converts a "YYYY-MM" key to a short display label, e.g., "Jan 26".
 const formatMonthLabel = (key) => {
   const [year, month] = key.split('-');
   const d = new Date(year, parseInt(month) - 1, 1);

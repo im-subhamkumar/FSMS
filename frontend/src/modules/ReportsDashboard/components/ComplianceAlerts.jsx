@@ -1,3 +1,8 @@
+// ComplianceAlerts.jsx -- Scrollable list of expiring/expired compliance items.
+// Shows licenses, medicals, and documents expiring within 30 days or already
+// expired. Each alert displays entity name, detail, type badge (colour-coded),
+// and expiry date. Header shows aggregate expired/expiring counts.
+// Data source: GET /api/reports/compliance
 import React from 'react';
 import { ShieldAlert, AlertTriangle, Clock } from 'lucide-react';
 

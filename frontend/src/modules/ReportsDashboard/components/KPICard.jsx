@@ -1,3 +1,7 @@
+// KPICard.jsx -- Reusable metric card for the dashboard summary row.
+// Displays an icon, numeric value, label, and optional subtitle.
+// Supports a loading skeleton state for async data. Hover effect
+// provides subtle lift animation for interactivity.
 import React from 'react';
 
 export default function KPICard({ label, value, icon, iconBg, loading, subtitle }) {

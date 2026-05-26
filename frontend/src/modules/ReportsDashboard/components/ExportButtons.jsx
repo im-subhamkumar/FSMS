@@ -1,3 +1,7 @@
+// ExportButtons.jsx -- CSV and PDF export for the Reports Dashboard.
+// CSV export: Generates a multi-section CSV file from the unified data object.
+// PDF export: Uses jsPDF to create a formatted PDF with KPIs, tables, and
+// footer text. Both formats include financial, student, and flight data.
 import React from 'react';
 import jsPDF from 'jspdf';
 import { FileSpreadsheet, FileText } from 'lucide-react';

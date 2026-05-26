@@ -1,6 +1,23 @@
+// ---------------------------------------------------------------------------
+// InstructorSlotsChart.jsx -- Instructor workload (horizontal bar chart)
+//
+// Displays assigned flying slots per instructor as a horizontal bar chart.
+// Full instructor names appear on the Y-axis (e.g., "Capt Arora"). Each
+// bar is individually coloured for visual distinction.
+//
+// Design decision: Horizontal layout was chosen because instructor names
+// are variable-length strings that truncate badly on a vertical X-axis.
+// A horizontal bar with a wide Y-axis (110px) accommodates full names.
+//
+// Data shape: [{ name: "Capt Arora", slots: 54, hours: 62 }, ...]
+// Source: GET /api/reports/instructors -> slotsPerInstructor
+// ---------------------------------------------------------------------------
+
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Briefcase } from 'lucide-react';
+
+const BAR_COLORS = ['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#06b6d4', '#0ea5e9', '#2563eb', '#7c3aed'];
 
 export default function InstructorSlotsChart({ data = [] }) {
   if (!data || data.length === 0) {
@@ -21,34 +38,38 @@ export default function InstructorSlotsChart({ data = [] }) {
     <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col min-h-[280px]">
       <div className="mb-4">
         <h3 className="text-gray-800 dark:text-gray-100 font-semibold text-sm">Instructor Workload</h3>
-        <p className="text-gray-400 dark:text-gray-500 text-xs">Top instructors by assigned slots</p>
+        <p className="text-gray-400 dark:text-gray-500 text-xs">Assigned flying slots per instructor</p>
       </div>
       <div className="flex-1 min-h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={sortedData} margin={{ top: 5, right: 5, left: 5, bottom: 15 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" strokeOpacity={0.15} />
+          <BarChart data={sortedData} layout="vertical" margin={{ top: 0, right: 15, left: 5, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" strokeOpacity={0.12} />
             <XAxis
+              type="number"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#64748b', fontSize: 11 }}
+              allowDecimals={false}
+            />
+            <YAxis
+              type="category"
               dataKey="name"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10, fontWeight: 500 }}
-              dy={8}
-              interval={0}
-              tickFormatter={(val) => val.split(' ')[0]}
+              tick={{ fill: '#475569', fontSize: 12, fontWeight: 600 }}
+              width={110}
             />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
             <Tooltip
-              cursor={{ fill: 'rgba(59,130,246,0.05)' }}
-              formatter={(value, name) => [value, name === 'slots' ? 'Slots' : 'Hours']}
+              cursor={{ fill: 'rgba(59,130,246,0.06)' }}
+              formatter={(value) => [`${value} slots`, 'Workload']}
               contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '12px' }}
+              labelStyle={{ fontWeight: '700', color: '#1e293b', paddingBottom: '2px' }}
             />
-            <Bar dataKey="slots" fill="url(#colorInstructor)" radius={[6, 6, 0, 0]} barSize={28} animationDuration={800} />
-            <defs>
-              <linearGradient id="colorInstructor" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
-                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.6} />
-              </linearGradient>
-            </defs>
+            <Bar dataKey="slots" radius={[0, 6, 6, 0]} barSize={20} animationDuration={800}>
+              {sortedData.map((_, i) => (
+                <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} fillOpacity={0.85} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>

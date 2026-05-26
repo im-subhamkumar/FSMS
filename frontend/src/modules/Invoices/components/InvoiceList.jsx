@@ -1,12 +1,27 @@
-// T3 — InvoiceList (T10-aligned)
-// Financial Summary row + searchable table + Create Invoice modal trigger
-// Enhanced with: Pagination, hover-reveal actions, improved empty state
-// (Patterns adopted from Student module StudentsRoot)
+// ---------------------------------------------------------------------------
+// InvoiceList.jsx -- Main invoice listing page
+//
+// Displays a paginated table of invoices with KPI summary cards, search bar,
+// status filter dropdown, and hover-reveal edit/delete actions. Pagination
+// is client-side with 10 items per page.
+//
+// Role-based view differences:
+//   - Admin/Staff: See all invoices. "Student" column visible. Create button
+//     and edit/delete hover actions available. Search matches invoice #,
+//     student name, and email.
+//   - Student: See only own invoices (filtered by backend). "Description"
+//     column replaces "Student" column. Create button and edit/delete actions
+//     hidden. Search matches invoice # and line item descriptions.
+//
+// The isStudent flag is derived from useAppStore().user.role and controls
+// all conditional rendering throughout this component.
+// ---------------------------------------------------------------------------
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, ChevronRight, ChevronLeft, Filter, RefreshCw, FileText, Edit2, Trash2 } from 'lucide-react';
 import { useInvoices } from '../hooks/useInvoices';
+import { useAppStore } from '../../../store/useAppStore';
 import StatusBadge from './StatusBadge';
 import InvoiceStats from './InvoiceStats';
 
@@ -20,6 +35,8 @@ const fmtDate = (d)   => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-d
 export default function InvoiceList() {
   const navigate = useNavigate();
   const { getInvoices, getStats, deleteInvoice } = useInvoices();
+  const { user } = useAppStore();
+  const isStudent = user?.role === 'Student';
 
   const [invoices,     setInvoices]     = useState([]);
   const [stats,        setStats]        = useState(null);
@@ -68,13 +85,19 @@ export default function InvoiceList() {
     setStatusFilter(status);
   };
 
-  // Client-side search against invoiceNumber and student name/email
+  // Client-side search — students search by invoice # and description;
+  // admins search by invoice #, student name, and email
   const filtered = invoices.filter(inv => {
     if (!search) return true;
-    const q           = search.toLowerCase();
+    const q = search.toLowerCase();
+    const matchInvoice = (inv.invoiceNumber || '').toLowerCase().includes(q);
+    if (isStudent) {
+      const desc = (inv.items || []).map(it => (it.description || '').toLowerCase()).join(' ');
+      return matchInvoice || desc.includes(q);
+    }
     const studentName = `${inv.student?.firstName || ''} ${inv.student?.lastName || ''}`.toLowerCase();
     return (
-      (inv.invoiceNumber || '').toLowerCase().includes(q) ||
+      matchInvoice ||
       studentName.includes(q) ||
       (inv.student?.email || '').toLowerCase().includes(q)
     );
@@ -103,17 +126,23 @@ export default function InvoiceList() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Invoices</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage student billing and payment records</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+            {isStudent ? 'My Invoices' : 'Invoices'}
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
+            {isStudent ? 'View your billing and payment records' : 'Manage student billing and payment records'}
+          </p>
         </div>
-        {/* Create Invoice page navigation */}
-        <button
-          onClick={() => navigate('/invoices/new')}
-          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-6 py-2.5 rounded-xl shadow-lg shadow-indigo-500/30 transition-all duration-300 hover:-translate-y-0.5 font-semibold text-sm active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          Create Invoice
-        </button>
+        {/* Create Invoice — Admin/Staff only */}
+        {!isStudent && (
+          <button
+            onClick={() => navigate('/invoices/new')}
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-6 py-2.5 rounded-xl shadow-lg shadow-indigo-500/30 transition-all duration-300 hover:-translate-y-0.5 font-semibold text-sm active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            Create Invoice
+          </button>
+        )}
       </div>
 
       {/* T10 required: Financial Summary row — now with click-to-filter */}
@@ -122,6 +151,7 @@ export default function InvoiceList() {
         loading={statsLoading}
         activeFilter={statusFilter}
         onFilterByStatus={handleFilterByStatus}
+        isStudent={isStudent}
       />
 
       {/* Filters Bar */}
@@ -130,7 +160,7 @@ export default function InvoiceList() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search invoice #, student name, email…"
+            placeholder={isStudent ? 'Search by invoice # or description…' : 'Search invoice #, student name, email…'}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:text-gray-200 transition-all"
@@ -193,7 +223,7 @@ export default function InvoiceList() {
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900/50">
                   <tr>
-                    {['Invoice #', 'Student', 'Issued Date', 'Due Date', 'Amount', 'Status', ''].map(h => (
+                    {['Invoice #', ...(isStudent ? ['Description'] : ['Student']), 'Issued Date', 'Due Date', 'Amount', 'Status', ''].map(h => (
                       <th key={h} className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {h}
                       </th>
@@ -212,14 +242,25 @@ export default function InvoiceList() {
                           {inv.invoiceNumber}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                            {inv.student?.firstName} {inv.student?.lastName}
+                      {isStudent ? (
+                        <td className="px-5 py-3">
+                          <span className="text-sm text-gray-700 dark:text-gray-300 line-clamp-1">
+                            {inv.items?.[0]?.description || '—'}
                           </span>
-                          <span className="text-xs text-gray-400">{inv.student?.email}</span>
-                        </div>
-                      </td>
+                          {inv.items?.length > 1 && (
+                            <span className="text-xs text-gray-400"> +{inv.items.length - 1} more</span>
+                          )}
+                        </td>
+                      ) : (
+                        <td className="px-5 py-3">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              {inv.student?.firstName} {inv.student?.lastName}
+                            </span>
+                            <span className="text-xs text-gray-400">{inv.student?.email}</span>
+                          </div>
+                        </td>
+                      )}
                       <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400">{fmtDate(inv.issuedDate)}</td>
                       <td className={`px-5 py-3 text-sm ${inv.status === 'OVERDUE' ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'}`}>
                         {fmtDate(inv.dueDate)}
@@ -228,10 +269,10 @@ export default function InvoiceList() {
                         <span className="text-sm font-bold text-gray-900 dark:text-gray-100">₹{fmt(inv.amount)}</span>
                       </td>
                       <td className="px-5 py-3"><StatusBadge status={inv.status} /></td>
-                      {/* Hover-reveal quick actions — pattern from Student module */}
+                      {/* Hover-reveal quick actions — Admin/Staff only */}
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {inv.status === 'PENDING' && (
+                          {!isStudent && inv.status === 'PENDING' && (
                             <>
                               <button
                                 onClick={(e) => { e.stopPropagation(); navigate(`/invoices/${inv.id}/edit`); }}

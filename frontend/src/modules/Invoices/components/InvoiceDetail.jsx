@@ -1,9 +1,25 @@
-// T3 — InvoiceDetail ( invoiceNumber, amount, 3 statuses + react-to-print)
+// ---------------------------------------------------------------------------
+// InvoiceDetail.jsx -- Single invoice detail view
+//
+// Displays full invoice information: header with status, line items table,
+// payment history ledger, and totals summary. Supports Print/PDF export
+// via react-to-print (available to all roles).
+//
+// Role-based controls:
+//   - Admin/Staff: Edit, Delete, Record Payment, Mark Overdue/Pending buttons
+//   - Student: Read-only view with Print/PDF only. All action buttons hidden.
+//
+// Status flow: PENDING <-> PAID <-> OVERDUE
+//   - PENDING: Edit, Delete, Record Payment, Mark as Overdue
+//   - OVERDUE: Record Payment, Set Pending
+//   - PAID: No actions (fully settled)
+// ---------------------------------------------------------------------------
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
 import { ArrowLeft, Trash2, Printer, CheckCheck, AlertCircle, Clock, IndianRupee, Edit2 } from 'lucide-react';
 import { useInvoices } from '../hooks/useInvoices';
+import { useAppStore } from '../../../store/useAppStore';
 import StatusBadge from './StatusBadge';
 import PrintableInvoice from './PrintableInvoice';
 import RecordPaymentModal from './RecordPaymentModal';
@@ -30,6 +46,8 @@ export default function InvoiceDetail() {
   const navigate      = useNavigate();
   const printRef      = useRef();
   const { getInvoice, updateStatus, deleteInvoice, addPayment } = useInvoices();
+  const { user } = useAppStore();
+  const isStudent = user?.role === 'Student';
 
   const [invoice,           setInvoice]           = useState(null);
   const [loading,           setLoading]           = useState(true);
@@ -139,30 +157,30 @@ export default function InvoiceDetail() {
         </h1>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Print / PDF — T10 bonus */}
+          {/* Print / PDF — available to all roles */}
           <button onClick={handlePrint}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <Printer className="w-4 h-4" /> Print / PDF
           </button>
 
-          {/* Edit Invoice — only for PENDING */}
-          {invoice.status === 'PENDING' && (
+          {/* Edit Invoice — Admin/Staff only, PENDING status */}
+          {!isStudent && invoice.status === 'PENDING' && (
             <button onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               <Edit2 className="w-4 h-4" /> Edit
             </button>
           )}
 
-          {/* Delete — only for PENDING */}
-          {invoice.status === 'PENDING' && (
+          {/* Delete — Admin/Staff only, PENDING status */}
+          {!isStudent && invoice.status === 'PENDING' && (
             <button onClick={() => setShowDeleteConfirm(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
               <Trash2 className="w-4 h-4" /> Delete
             </button>
           )}
 
-          {/* Status transition buttons */}
-          {actions.map(action => {
+          {/* Status transition buttons — Admin/Staff only */}
+          {!isStudent && actions.map(action => {
             const Icon = action.icon;
             return (
               <button key={action.id} onClick={() => handleAction(action.id)}

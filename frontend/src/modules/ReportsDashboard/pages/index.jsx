@@ -1,5 +1,20 @@
-// T3 — Reports Dashboard module entry point
-// Single-page read-only dashboard (no sub-routes needed)
+// ---------------------------------------------------------------------------
+// Reports Dashboard -- Main page (index.jsx)
+//
+// Single-page read-only dashboard aggregating operational and financial
+// data from seven backend endpoints. Uses useReportData hook for parallel
+// data fetching with date range filtering.
+//
+// Layout sections (top to bottom):
+//   1. KPI Cards -- 6 metrics in a responsive grid
+//   2. Financial Overview -- Revenue bar chart + Invoice status pie chart
+//   3. Flight Operations -- Slot activity line chart + Student growth chart
+//   4. Academy and People -- Courses bar chart + Instructor workload chart
+//   5. Fleet and Compliance -- Aircraft status chart + Compliance alerts
+//
+// Currency values use Indian formatting (Lakhs/Crore) via the fmtINR()
+// helper. All chart components handle empty/null data gracefully.
+// ---------------------------------------------------------------------------
 
 import React, { useMemo } from 'react';
 import { useReportData } from '../hooks/useReportData';
@@ -21,6 +36,15 @@ import {
   TrendingUp, Shield, BarChart3, GraduationCap,
   Gauge, AlertCircle
 } from 'lucide-react';
+
+// Indian currency formatting for KPI cards
+function fmtINR(value) {
+  const v = Number(value) || 0;
+  if (v >= 10000000) return `₹${(v / 10000000).toFixed(2)} Cr`;
+  if (v >= 100000)   return `₹${(v / 100000).toFixed(2)} L`;
+  if (v >= 1000)     return `₹${(v / 1000).toFixed(1)}K`;
+  return `₹${v.toLocaleString('en-IN')}`;
+}
 
 export default function ReportsDashboardRoot() {
   const defaultDateRange = useMemo(() => {
@@ -93,7 +117,7 @@ export default function ReportsDashboardRoot() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <KPICard
               label="Total Revenue"
-              value={`₹${(data.financial?.totalRevenue || 0).toLocaleString()}`}
+              value={fmtINR(data.financial?.totalRevenue || 0)}
               icon={<IndianRupee className="w-4 h-4 text-emerald-600" />}
               iconBg="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-800"
               loading={loading}
@@ -134,7 +158,7 @@ export default function ReportsDashboardRoot() {
               icon={<AlertTriangle className="w-4 h-4 text-rose-600" />}
               iconBg="bg-rose-50 dark:bg-rose-900/30 border border-rose-100 dark:border-rose-800"
               loading={loading}
-              subtitle={data.financial?.overdueAmount ? `₹${data.financial.overdueAmount.toLocaleString()}` : null}
+              subtitle={data.financial?.overdueAmount ? fmtINR(data.financial.overdueAmount) : null}
             />
           </div>
 

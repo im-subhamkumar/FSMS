@@ -1,3 +1,6 @@
+// CoursesByLevelChart.jsx -- Vertical bar chart of students per course.
+// Each bar is colour-coded by course level (BEGINNER, INTERMEDIATE, ADVANCED).
+// Data source: GET /api/reports/courses -> studentsPerCourse
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { BookOpen } from 'lucide-react';

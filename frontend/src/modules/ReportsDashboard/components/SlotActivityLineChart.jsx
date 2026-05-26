@@ -1,3 +1,6 @@
+// SlotActivityLineChart.jsx -- Multi-line chart showing flying slot trends.
+// Tracks booked, completed, and cancelled slots over monthly intervals.
+// Data source: GET /api/reports/flights -> slotActivity
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Plane } from 'lucide-react';

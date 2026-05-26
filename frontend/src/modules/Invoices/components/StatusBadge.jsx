@@ -1,4 +1,8 @@
-// T3 — StatusBadge (T10-aligned: PENDING, PAID, OVERDUE)
+// StatusBadge.jsx -- Reusable pill-shaped status indicator.
+// Renders a colour-coded badge for PENDING (amber), PAID (green), or
+// OVERDUE (red) statuses. Includes a dot indicator and supports two
+// sizes: 'sm' (table rows) and 'lg' (detail view headers).
+// Falls back to a neutral gray badge for unknown status values.
 import React from 'react';
 
 const CONFIG = {
